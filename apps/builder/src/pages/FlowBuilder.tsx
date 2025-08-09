@@ -3,12 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StepBuilder } from '../components/StepBuilder';
 import { FieldBuilder } from '../components/FieldBuilder';
 import { LogicBuilder } from '../components/LogicBuilder';
-import { PreviewPanel } from '../components/PreviewPanel';
+
 import { ThemeSelector, ColorPaletteDisplay } from '../components/ThemeSelector';
 import { ColorSystemConfig } from '../components/ColorSystemConfig';
 import { createAdvancedTheme, type AdvancedThemeConfig } from '../themes/colorSystem';
 import { useFlowStore } from '../stores/flowStore';
-import { Play, Save, Settings, Eye, X, GitBranch } from 'lucide-react';
+import { Play, Save, Settings, Eye, GitBranch } from 'lucide-react';
 
 interface Step {
   id: string;
@@ -44,7 +44,7 @@ export function FlowBuilder() {
   const navigate = useNavigate();
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'fields' | 'logic'>('fields');
   const [isSaving, setIsSaving] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
@@ -361,11 +361,6 @@ export function FlowBuilder() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // ESC to close preview
-      if (event.key === 'Escape' && showPreview) {
-        setShowPreview(false);
-      }
-      
       // Ctrl/Cmd + S to save
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault();
@@ -375,7 +370,7 @@ export function FlowBuilder() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showPreview, handleSave]);
+  }, [handleSave]);
 
   // Loading state
   if (isLoading) {
@@ -454,17 +449,6 @@ export function FlowBuilder() {
         </div>
         
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 ${
-              showPreview 
-                ? 'bg-blue-100 border-blue-300 text-blue-700' 
-                : 'border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            {showPreview ? 'Hide Preview' : 'Show Preview'}
-          </button>
           <button 
             onClick={() => setShowSettings(!showSettings)}
             className={`p-2 border rounded-md flex items-center gap-2 ${
@@ -669,36 +653,7 @@ export function FlowBuilder() {
           </div>
         </div>
 
-        {/* Right Sidebar - Preview */}
-        {showPreview && (
-          <div className="w-96 bg-gray-50 border-l border-gray-200">
-            <div className="h-full flex flex-col">
-              <div className="p-4 border-b bg-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Live Preview</h3>
-                    <p className="text-xs text-gray-500 mt-1">See how your form looks • Press ESC to close</p>
-                  </div>
-                  <button
-                    onClick={() => setShowPreview(false)}
-                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                    title="Close Preview"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <PreviewPanel
-                  flow={currentFlow ? {
-                    ...currentFlow,
-                    nodes: convertStepsToNodes(steps)
-                  } : null}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
 
 

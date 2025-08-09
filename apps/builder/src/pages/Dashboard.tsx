@@ -3,11 +3,9 @@ import { Link } from 'react-router-dom';
 import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink, Trash2 } from 'lucide-react';
 import { useFlowStore } from '../stores/flowStore';
 import { AnalyticsDashboard } from '../components/AnalyticsCard';
-import { QuickStartModal } from '../components/QuickStartModal';
 import { useToast } from '../hooks/useToast';
 
 export function Dashboard() {
-  const [showQuickStart, setShowQuickStart] = useState(false);
   const { toast } = useToast();
   
   const { 
@@ -36,32 +34,10 @@ export function Dashboard() {
     }
   }, [flows]);
 
-  const handleCreateFlow = async (template?: any, flowName?: string) => {
+  const handleCreateFlow = async () => {
     try {
-      let newFlow;
-      
-      if (template && template.nodes && template.nodes.length > 0) {
-        // Create flow with template - clean payload
-        const cleanFlowData = {
-          title: flowName || template.name,
-          description: template.description,
-          nodes: template.nodes,
-          settings: {
-            allowMultipleSubmissions: false,
-            showProgressBar: true,
-            requireAuth: false,
-            collectAnalytics: true,
-          },
-          theme: {},
-          status: 'draft' as const,
-        };
-        
-        const { flowsApi } = await import('../services/api');
-        newFlow = await flowsApi.create(cleanFlowData);
-      } else {
-        // Create blank flow
-        newFlow = await createNewFlow(flowName);
-      }
+      // Create blank flow only
+      const newFlow = await createNewFlow('Untitled Flow');
       
       // Navigate to builder with the new flow ID
       if (newFlow?.id) {
@@ -70,10 +46,6 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to create flow:', error);
     }
-  };
-
-  const handleShowQuickStart = () => {
-    setShowQuickStart(true);
   };
 
   const handlePublishFlow = async (flowId: string) => {
@@ -146,8 +118,8 @@ export function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <button 
-          onClick={handleShowQuickStart}
+                <button
+          onClick={handleCreateFlow}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-50"
           disabled={isLoading}
         >
@@ -203,7 +175,7 @@ export function Dashboard() {
             <div className="text-gray-400 mb-2">📝</div>
             <p className="text-gray-500 text-sm">No flows created yet</p>
             <button 
-              onClick={handleShowQuickStart}
+              onClick={handleCreateFlow}
               className="mt-2 inline-block text-blue-600 hover:text-blue-700 text-sm"
             >
               Create your first flow
@@ -334,12 +306,7 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Quick Start Modal */}
-      <QuickStartModal
-        isOpen={showQuickStart}
-        onClose={() => setShowQuickStart(false)}
-        onCreateFlow={handleCreateFlow}
-      />
+
     </div>
   );
 }

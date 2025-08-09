@@ -212,6 +212,11 @@ class ApiClient {
     return this.request<any>(`/responses/flow/${flowId}/analytics`);
   }
 
+  // Global analytics
+  async getGlobalAnalytics(): Promise<any> {
+    return this.request<any>('/analytics');
+  }
+
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string; version: string }> {
     return this.request<{ status: string; timestamp: string; version: string }>('/health', {
@@ -244,6 +249,10 @@ export const responsesApi = {
   submit: (response: FormResponse) => apiClient.submitResponse(response),
   export: (flowId: string, format?: 'json' | 'csv') => apiClient.exportResponses(flowId, format),
   getAnalytics: (flowId: string) => apiClient.getResponseAnalytics(flowId),
+};
+
+export const analyticsApi = {
+  getGlobal: () => apiClient.getGlobalAnalytics(),
 };
 
 // Convenience function for form submission

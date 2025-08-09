@@ -1,39 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFlowStore } from '../stores/flowStore';
-import { QuickStartModal } from './QuickStartModal';
 
 export function Navbar() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [showQuickStart, setShowQuickStart] = useState(false);
   const { createNewFlow, isLoading } = useFlowStore();
 
-  const handleCreateFlow = async (template?: any, flowName?: string) => {
+  const handleCreateFlow = async () => {
     try {
-      let newFlow;
-      
-      if (template && template.nodes && template.nodes.length > 0) {
-        // Create flow with template - clean payload
-        const cleanFlowData = {
-          title: flowName || template.name,
-          description: template.description,
-          nodes: template.nodes,
-          settings: {
-            allowMultipleSubmissions: false,
-            showProgressBar: true,
-            requireAuth: false,
-            collectAnalytics: true,
-          },
-          theme: {},
-          status: 'draft' as const,
-        };
-        
-        const { flowsApi } = await import('../services/api');
-        newFlow = await flowsApi.create(cleanFlowData);
-      } else {
-        // Create blank flow
-        newFlow = await createNewFlow(flowName);
-      }
+      // Create blank flow only
+      const newFlow = await createNewFlow('Untitled Flow');
       
       if (newFlow?.id) {
         window.location.href = `/builder/${newFlow.id}`;
@@ -103,7 +79,7 @@ export function Navbar() {
             </div>
 
             <button 
-              onClick={() => setShowQuickStart(true)}
+              onClick={handleCreateFlow}
               disabled={isLoading}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
@@ -114,12 +90,7 @@ export function Navbar() {
       </div>
     </nav>
 
-    {/* Quick Start Modal */}
-    <QuickStartModal
-      isOpen={showQuickStart}
-      onClose={() => setShowQuickStart(false)}
-      onCreateFlow={handleCreateFlow}
-    />
+
   </>
   );
 }

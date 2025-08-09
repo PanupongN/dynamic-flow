@@ -25,10 +25,6 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize storage
 await initializeStorage();
 
-// Routes
-app.use('/api/flows', flowRoutes);
-app.use('/api/responses', responseRoutes);
-
 // Health check
 app.get('/health', (req, res) => {
   res.json({ 
@@ -39,16 +35,83 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Global analytics endpoint
+// Template list endpoints (fallback for external requests)
+app.get('/get_template_list', (req, res) => {
+  console.log('⚠️ Legacy template list endpoint called - this endpoint is deprecated');
+  res.status(404).json({
+    error: 'Endpoint not available',
+    message: 'Template list endpoint is deprecated. Templates are now handled client-side.',
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Handle both GET and POST for template list
+app.get('/api/get_template_list', (req, res) => {
+  console.log('⚠️ Legacy API template list endpoint called (GET) - this endpoint is deprecated');
+  
+  // Set CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  res.status(404).json({
+    error: 'Endpoint not available',
+    message: 'Template list endpoint is deprecated. Templates are now handled client-side.',
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method
+  });
+});
+
+app.post('/api/get_template_list', (req, res) => {
+  console.log('⚠️ Legacy API template list endpoint called (POST) - this endpoint is deprecated');
+  
+  // Set CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  res.status(404).json({
+    error: 'Endpoint not available',
+    message: 'Template list endpoint is deprecated. Templates are now handled client-side.',
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Handle OPTIONS for CORS preflight
+app.options('/api/get_template_list', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(200).send();
+});
+
+// Global analytics endpoint (must be before /api/flows to avoid conflicts)
 app.get('/api/analytics', async (req, res) => {
+  console.log('📊 Global analytics endpoint called');
+  
+  // Set CORS headers explicitly
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
   try {
     const analytics = await getAnalytics(); // Get global analytics (no flowId)
+    console.log('📊 Analytics data:', analytics);
     res.json(analytics);
   } catch (error) {
     console.error('Error fetching global analytics:', error);
     res.status(500).json({ error: 'Failed to fetch global analytics' });
   }
 });
+
+// Routes
+app.use('/api/flows', flowRoutes);
+app.use('/api/responses', responseRoutes);
 
 // 404 handler
 app.use('*', notFound);

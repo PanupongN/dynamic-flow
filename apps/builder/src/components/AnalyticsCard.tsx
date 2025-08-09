@@ -92,15 +92,15 @@ export function AnalyticsDashboard({ flows }: { flows: any[] }) {
   useEffect(() => {
     const fetchGlobalAnalytics = async () => {
       try {
-        // Use ApiClient instead of direct fetch
-        const { apiClient } = await import('../services/api');
+        // Use analytics API
+        const { analyticsApi } = await import('../services/api');
         
-        // Try to fetch analytics from the API
-        const response = await fetch(`${apiClient.baseURL}/analytics`);
-        
-        if (!response.ok) {
+        try {
+          const analytics = await analyticsApi.getGlobal();
+          setGlobalAnalytics(analytics);
+        } catch (apiError: any) {
           // If analytics endpoint doesn't exist, use mock data
-          if (response.status === 404) {
+          if (apiError.message.includes('404') || apiError.message.includes('Not Found')) {
             console.warn('Analytics endpoint not found, using mock data');
             setGlobalAnalytics({
               totalForms: 12,
@@ -112,16 +112,8 @@ export function AnalyticsDashboard({ flows }: { flows: any[] }) {
             });
             return;
           }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw apiError;
         }
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Response is not JSON - server might be returning HTML error page');
-        }
-
-        const data = await response.json();
-        setGlobalAnalytics(data);
       } catch (error) {
         console.error('Failed to fetch global analytics:', error);
         
