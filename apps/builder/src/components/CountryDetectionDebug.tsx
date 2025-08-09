@@ -1,5 +1,6 @@
 import { useCountryDetection } from '../hooks/useCountryDetection';
 import { testCountryCodes } from '../utils/countryCodeTest';
+import { testEmailValidation } from '../utils/emailValidationTest';
 import { detectChinaEnvironment } from '../utils/chinaGeoLocation';
 
 /**
@@ -47,12 +48,18 @@ export function CountryDetectionDebug() {
             </div>
           )}
           
-          <div className="pt-1 border-t border-gray-600">
+          <div className="pt-1 border-t border-gray-600 space-y-1">
             <button 
               onClick={testCountryCodes}
-              className="text-xs text-blue-400 hover:text-blue-300 underline"
+              className="block text-xs text-blue-400 hover:text-blue-300 underline"
             >
               🧪 Test Country Codes
+            </button>
+            <button 
+              onClick={testEmailValidation}
+              className="block text-xs text-green-400 hover:text-green-300 underline"
+            >
+              📧 Test Email Validation
             </button>
           </div>
         </div>

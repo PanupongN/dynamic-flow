@@ -289,7 +289,6 @@ export async function detectUserCountry(): Promise<CountryInfo> {
     const { detectCountryForChina } = await import('./chinaGeoLocation');
     const chinaResult = await detectCountryForChina();
     if (chinaResult) {
-      console.log('🇨🇳 Country detected via China-specific method:', chinaResult);
       setCachedCountry(chinaResult);
       return chinaResult;
     }
@@ -301,7 +300,6 @@ export async function detectUserCountry(): Promise<CountryInfo> {
   try {
     const cloudflare = await detectCountryCloudflare();
     if (cloudflare) {
-      console.log('✅ Country detected via Cloudflare:', cloudflare);
       setCachedCountry(cloudflare);
       return cloudflare;
     }
@@ -313,7 +311,6 @@ export async function detectUserCountry(): Promise<CountryInfo> {
   try {
     const ipapi = await detectCountryIpApi();
     if (ipapi) {
-      console.log('✅ Country detected via ipapi.co:', ipapi);
       setCachedCountry(ipapi);
       return ipapi;
     }
@@ -325,7 +322,6 @@ export async function detectUserCountry(): Promise<CountryInfo> {
   try {
     const ipinfo = await detectCountryIpInfo();
     if (ipinfo) {
-      console.log('✅ Country detected via ipinfo.io:', ipinfo);
       setCachedCountry(ipinfo);
       return ipinfo;
     }
@@ -337,7 +333,6 @@ export async function detectUserCountry(): Promise<CountryInfo> {
   try {
     const timezone = detectCountryByTimezone();
     if (timezone) {
-      console.log('✅ Country detected via timezone:', timezone);
       setCachedCountry(timezone);
       return timezone;
     }

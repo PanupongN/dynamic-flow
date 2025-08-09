@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { submitFormResponse } from '../services/api';
 import { PhoneInputField } from './PhoneInputField';
+import { phoneValidationRule } from '../utils/phoneValidation';
+import { emailValidationRule } from '../utils/emailValidation';
 import {
   Flow,
   FlowNode,
@@ -356,7 +358,11 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
           value: true,
           message: `${label} is required`
         } : false,
-        ...getValidationRules(validation || [])
+        ...getValidationRules(validation || []),
+        // Add phone validation for phone_input type
+        ...(type === 'phone_input' && phoneValidationRule(isFieldRequired)),
+        // Add email validation for email_input type
+        ...(type === 'email_input' && emailValidationRule(isFieldRequired))
       }
     };
 
@@ -430,9 +436,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       onChange={field.onChange}
                       placeholder={question.placeholder || "Enter phone number"}
                       required={required}
-                      error={!!fieldState.error}
-                      errorMessage={fieldState.error?.message}
                     />
+                    {fieldState.error && (
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
+                    )}
                   </div>
                 );
 

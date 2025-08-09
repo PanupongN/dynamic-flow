@@ -32,7 +32,6 @@ function App() {
             </Routes>
       </main>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <CountryDetectionDebug />
     </div>
   );
 }

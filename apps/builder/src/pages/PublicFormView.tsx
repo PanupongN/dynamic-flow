@@ -57,7 +57,6 @@ export const PublicFormView: React.FC = () => {
         // Use the API service to load published flow data
         const { flowsApi } = await import('../services/api');
         const flowData = await flowsApi.getPublished(flowId);
-        console.log('📄 PublicFormView - Loaded published flow theme:', flowData.theme);
         
         setFlow(flowData);
         setError(null);
@@ -192,20 +191,6 @@ export const PublicFormView: React.FC = () => {
   const themeId = (flow.theme as any)?.id || 'default';
   const theme = getTheme(themeId);
   const themeCSS = generateCSSVariables(theme);
-  
-  // Debug logging
-  console.log('PublicFormView - Flow theme data:', {
-    flowTheme: flow.theme,
-    themeId,
-    themeName: theme.name,
-    primaryColor: theme.colors.primary.main,
-    generatedCSS: themeCSS.substring(0, 500) + '...',
-    semanticColorsTest: {
-      negativeInCSS: themeCSS.includes('--color-negative-100'),
-      successInCSS: themeCSS.includes('--color-success-100'),
-      warningInCSS: themeCSS.includes('--color-warning-100')
-    }
-  });
 
   return (
     <div className="min-h-full" style={{ backgroundColor: theme.colors.background.default }}>

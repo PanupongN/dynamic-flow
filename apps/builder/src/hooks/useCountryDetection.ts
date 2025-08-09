@@ -24,7 +24,6 @@ export function useCountryDetection(): UseCountryDetectionResult {
         if (isMounted) {
           setCountryInfo(result);
           setError(null);
-          console.log(`🌍 Country detected: ${result.name} (${result.code}) via ${result.method}`);
         }
       })
       .catch((err) => {

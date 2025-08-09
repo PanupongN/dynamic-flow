@@ -70,7 +70,6 @@ export const FormView: React.FC = () => {
   }, [flowId]);
 
   const handleSubmitSuccess = (response: any) => {
-    console.log('Form submitted successfully:', response);
     setIsSubmitted(true);
     
     addToast({
@@ -87,7 +86,6 @@ export const FormView: React.FC = () => {
   };
 
   const handleSubmitError = (error: string) => {
-    console.error('Form submission error:', error);
     
     addToast({
       id: Date.now().toString(),
