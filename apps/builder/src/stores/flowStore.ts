@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Flow as SharedFlow } from '@dynamic-flow/types';
 import { devtools } from 'zustand/middleware';
 
 interface FlowNode {
@@ -13,39 +14,22 @@ interface FlowNode {
   connections: any[];
 }
 
-interface Flow {
-  id: string;
-  title: string;
-  description?: string;
-  nodes: FlowNode[];
-  settings: {
-    allowMultipleSubmissions: boolean;
-    showProgressBar: boolean;
-    requireAuth: boolean;
-    collectAnalytics: boolean;
-  };
-  theme: any;
-  createdAt: Date;
-  updatedAt: Date;
-  status: 'draft' | 'published' | 'archived';
-}
-
 interface FlowStore {
-  flows: Flow[];
-  currentFlow: Flow | null;
+  flows: SharedFlow[];
+  currentFlow: SharedFlow | null;
   isLoading: boolean;
   error: string | null;
   
   // Actions
-  setCurrentFlow: (flow: Flow) => void;
+  setCurrentFlow: (flow: SharedFlow) => void;
   addNode: (node: FlowNode) => void;
   updateNode: (nodeId: string, updates: Partial<FlowNode>) => void;
   deleteNode: (nodeId: string) => void;
-  updateFlowSettings: (settings: Partial<Flow>) => void;
-  saveFlow: (flow: Flow) => Promise<void>;
+  updateFlowSettings: (settings: Partial<SharedFlow>) => void;
+  saveFlow: (flow: SharedFlow) => Promise<void>;
   publishFlow: (flowId: string) => Promise<void>;
   loadFlows: () => Promise<void>;
-  createNewFlow: () => void;
+  createNewFlow: (title?: string) => Promise<SharedFlow>;
 }
 
 const defaultTheme = {
@@ -355,12 +339,12 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
   },
 
-  createNewFlow: async () => {
+  createNewFlow: async (title?: string) => {
     set({ isLoading: true, error: null });
     
     try {
-      const newFlow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'> = {
-        title: 'Untitled Flow',
+      const newFlow: Omit<SharedFlow, 'id' | 'createdAt' | 'updatedAt'> = {
+        title: title || 'Untitled Flow',
         nodes: [],
         settings: {
           allowMultipleSubmissions: false,
@@ -401,7 +385,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         console.warn('API not available, creating local flow:', apiError);
         
         // Fallback to local creation
-        const localFlow: Flow = {
+        const localFlow: SharedFlow = {
           id: `flow_${Date.now()}`,
           ...newFlow,
           createdAt: new Date(),

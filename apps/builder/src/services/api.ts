@@ -111,6 +111,14 @@ class ApiClient {
     return this.request<Flow>(`/flows/${id}`);
   }
 
+  async getDraftFlow(id: string): Promise<Flow> {
+    return this.request<Flow>(`/flows/${id}/draft`);
+  }
+
+  async getPublishedFlow(id: string): Promise<Flow> {
+    return this.request<Flow>(`/flows/${id}/published`);
+  }
+
   async createFlow(flow: Partial<Flow>): Promise<Flow> {
     return this.request<Flow>('/flows', {
       method: 'POST',
@@ -219,6 +227,8 @@ export const apiClient = new ApiClient(API_BASE_URL);
 export const flowsApi = {
   getAll: (params?: Parameters<typeof apiClient.getFlows>[0]) => apiClient.getFlows(params),
   getById: (id: string) => apiClient.getFlow(id),
+  getDraft: (id: string) => apiClient.getDraftFlow(id),
+  getPublished: (id: string) => apiClient.getPublishedFlow(id),
   create: (flow: Partial<Flow>) => apiClient.createFlow(flow),
   update: (id: string, flow: Partial<Flow>) => apiClient.updateFlow(id, flow),
   delete: (id: string) => apiClient.deleteFlow(id),

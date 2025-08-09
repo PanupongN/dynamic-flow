@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StepBuilder } from '../components/StepBuilder';
 import { FieldBuilder } from '../components/FieldBuilder';
@@ -45,6 +45,9 @@ export function FlowBuilder() {
   const [activeTab, setActiveTab] = useState<'fields' | 'logic'>('fields');
   const [isSaving, setIsSaving] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [editingFlowName, setEditingFlowName] = useState(false);
+  const [tempFlowName, setTempFlowName] = useState('');
   const lastSavedStepsRef = useRef<string>('');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManualOperationRef = useRef<boolean>(false);
@@ -54,7 +57,8 @@ export function FlowBuilder() {
     isLoading,
     error,
     setCurrentFlow,
-    createNewFlow
+    saveFlow,
+    publishFlow
   } = useFlowStore();
 
   // Convert flow nodes to steps
@@ -87,12 +91,47 @@ export function FlowBuilder() {
         label: step.title,
         description: step.description,
         required: true,
-        questions: step.fields,
+        questions: step.fields.map(field => ({
+          ...field,
+          // Convert validation object to ValidationRule array format
+          validation: field.validation ? convertValidationToRules(field.validation) : []
+        })),
         logic: step.logic || [],
         loop: step.loop || undefined
       },
       connections: index < steps.length - 1 ? [{ targetNodeId: steps[index + 1].id }] : []
     }));
+  };
+
+  // Helper function to convert validation object to ValidationRule array
+  const convertValidationToRules = (validation: { min?: number; max?: number; pattern?: string }) => {
+    const rules: any[] = [];
+    
+    if (validation.min !== undefined) {
+      rules.push({
+        type: 'min_length',
+        value: validation.min,
+        message: `Minimum length is ${validation.min} characters`
+      });
+    }
+    
+    if (validation.max !== undefined) {
+      rules.push({
+        type: 'max_length',
+        value: validation.max,
+        message: `Maximum length is ${validation.max} characters`
+      });
+    }
+    
+    if (validation.pattern) {
+      rules.push({
+        type: 'regex',
+        value: validation.pattern,
+        message: 'Invalid format'
+      });
+    }
+    
+    return rules;
   };
 
   // Load flow when component mounts
@@ -120,12 +159,13 @@ export function FlowBuilder() {
           navigate('/');
         }
       } else {
-        await createNewFlow();
+        // Redirect to dashboard if no flowId provided
+        navigate('/');
       }
     };
 
     loadFlow();
-  }, [flowId, setCurrentFlow, createNewFlow, navigate]);
+  }, [flowId, setCurrentFlow, navigate]);
 
   // Auto-save when steps change (only if actually changed)
   useEffect(() => {
@@ -295,6 +335,50 @@ export function FlowBuilder() {
 
   const selectedStep = steps.find(step => step.id === selectedStepId);
 
+  // Flow name editing functions
+  const handleStartEditingFlowName = () => {
+    setTempFlowName(currentFlow?.title || '');
+    setEditingFlowName(true);
+  };
+
+  const handleSaveFlowName = async () => {
+    if (!currentFlow || !tempFlowName.trim()) return;
+    
+    try {
+      setIsSaving(true);
+      const updatedFlow = { ...currentFlow, title: tempFlowName.trim() };
+      
+      // Update via API
+      try {
+        const { flowsApi } = await import('../services/api');
+        await flowsApi.update(flowId!, { title: tempFlowName.trim() });
+      } catch (apiError) {
+        console.warn('API not available, updating locally:', apiError);
+      }
+      
+      // Update store
+      setCurrentFlow(updatedFlow);
+      setEditingFlowName(false);
+      
+      // Show success toast
+      if (typeof window !== 'undefined' && (window as any).showToast) {
+        (window as any).showToast('success', 'Flow name updated');
+      }
+    } catch (error) {
+      console.error('Failed to update flow name:', error);
+      if (typeof window !== 'undefined' && (window as any).showToast) {
+        (window as any).showToast('error', 'Failed to update flow name');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEditingFlowName = () => {
+    setEditingFlowName(false);
+    setTempFlowName('');
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -402,11 +486,106 @@ export function FlowBuilder() {
             <Eye className="w-4 h-4" />
             {showPreview ? 'Hide Preview' : 'Show Preview'}
           </button>
-          <button className="p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-2 border rounded-md flex items-center gap-2 ${
+              showSettings 
+                ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                : 'border-gray-300 hover:bg-gray-50'
+            }`}
+          >
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="bg-gray-50 border-b border-gray-200 p-4">
+          <div className="max-w-2xl">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Flow Settings</h3>
+            
+            {/* Flow Name Section */}
+            <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Basic Information</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Flow Name
+                  </label>
+                  {editingFlowName ? (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={tempFlowName}
+                        onChange={(e) => setTempFlowName(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter flow name"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveFlowName();
+                          } else if (e.key === 'Escape') {
+                            handleCancelEditingFlowName();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleSaveFlowName}
+                        disabled={!tempFlowName.trim() || isSaving}
+                        className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEditingFlowName}
+                        className="px-3 py-2 text-gray-600 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-900">{currentFlow?.title || 'Untitled Flow'}</span>
+                      <button
+                        onClick={handleStartEditingFlowName}
+                        className="text-blue-600 text-sm hover:text-blue-700"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <p className="text-gray-600 text-sm">
+                    {currentFlow?.description || 'No description'}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    currentFlow?.status === 'published' 
+                      ? 'bg-green-100 text-green-800' 
+                      : currentFlow?.status === 'draft'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {currentFlow?.status === 'draft' ? 'Draft' : currentFlow?.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">

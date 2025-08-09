@@ -53,25 +53,29 @@ export const PublicFormView: React.FC = () => {
       try {
         setLoading(true);
         
-        // Use published endpoint for public form view
-        const response = await fetch(`/api/flows/${flowId}/published`);
+        // Use the API service to load published flow data
+        const { flowsApi } = await import('../services/api');
+        const flowData = await flowsApi.getPublished(flowId);
         
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError('This form is not currently available or not published.');
-          } else {
-            setError('Failed to load form');
-          }
-          setLoading(false);
-          return;
-        }
-        
-        const flowData = await response.json();
         setFlow(flowData);
         setError(null);
       } catch (err) {
-        console.error('Error loading flow:', err);
-        setError('Form not found or is no longer available.');
+        console.error('Error loading published flow:', err);
+        
+        // Provide specific error messages with more details for debugging
+        if (err instanceof Error) {
+          if (err.message.includes('404') || err.message.includes('not found')) {
+            setError('This form is not currently available or not published. Please make sure the form has been published and the flow ID is correct.');
+          } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+            setError('Cannot connect to API server (http://localhost:3001). Please make sure the API server is running.');
+          } else if (err.message.includes('500')) {
+            setError('Server error. Please try again later.');
+          } else {
+            setError(`Failed to load form: ${err.message}`);
+          }
+        } else {
+          setError('Form not found or is no longer available.');
+        }
       } finally {
         setLoading(false);
       }
@@ -221,8 +225,11 @@ export const PublicFormView: React.FC = () => {
       
       <div className="container mx-auto py-8">
         <ErrorBoundary>
-                    <FormRenderer 
+          <FormRenderer 
             flow={flow}
+            isPreview={false}
+            onSubmit={handleSubmitSuccess}
+            onError={handleSubmitError}
           />
         </ErrorBoundary>
       </div>

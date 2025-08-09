@@ -52,25 +52,29 @@ export const PreviewFormView: React.FC = () => {
       try {
         setLoading(true);
         
-        // Use draft endpoint for preview
-        const response = await fetch(`/api/flows/${flowId}/draft`);
+        // Use the API service to load draft flow data for preview
+        const { flowsApi } = await import('../services/api');
+        const flowData = await flowsApi.getDraft(flowId);
         
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError('Flow not found');
-          } else {
-            setError('Failed to load form preview');
-          }
-          setLoading(false);
-          return;
-        }
-        
-        const flowData = await response.json();
         setFlow(flowData);
         setError(null);
       } catch (err) {
-        console.error('Error loading draft flow:', err);
-        setError('Failed to load form preview');
+        console.error('Error loading flow for preview:', err);
+        
+        // Try to get more specific error information
+        if (err instanceof Error) {
+          if (err.message.includes('404') || err.message.includes('not found')) {
+            setError('Flow not found. Make sure the flow exists and has been saved.');
+          } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+            setError('Cannot connect to API server. Make sure the API server is running on http://localhost:3001');
+          } else if (err.message.includes('500')) {
+            setError('Internal server error. Please try again later.');
+          } else {
+            setError(`Failed to load form preview: ${err.message}`);
+          }
+        } else {
+          setError('Failed to load form preview');
+        }
       } finally {
         setLoading(false);
       }

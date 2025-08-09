@@ -27,7 +27,15 @@ interface FormResponse {
     value: any;
     type: string;
   }>;
-  submittedAt: string;
+  metadata: {
+    userAgent?: string;
+    ipAddress?: string;
+    referrer?: string;
+    completionTime: number;
+    deviceType: 'desktop' | 'tablet' | 'mobile';
+    startedAt?: string;
+    submittedAt: string;
+  };
 }
 
 interface FormRendererProps {
@@ -43,6 +51,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formStartTime] = useState(new Date());
 
   const { 
     control, 
@@ -217,6 +226,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
         let nodeId = '';
         
         for (const node of flow.nodes) {
+          // Case 1: Step nodes with multiple questions
           if (node.data.questions) {
             const question = node.data.questions.find(q => q.id === questionId);
             if (question) {
@@ -224,6 +234,32 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
               nodeId = node.id;
               break;
             }
+          }
+          // Case 2: Single field nodes (node ID matches question ID)
+          else if (node.id === questionId) {
+            questionType = node.type;
+            nodeId = node.id;
+            break;
+          }
+        }
+        
+        // Log warning if nodeId is still empty
+        if (!nodeId) {
+          console.warn(`Could not find nodeId for questionId: ${questionId}`, {
+            questionId,
+            value,
+            availableNodes: flow.nodes.map(n => ({ 
+              id: n.id, 
+              type: n.type, 
+              questions: n.data.questions?.map(q => q.id) || [] 
+            }))
+          });
+          
+          // Try to find the node by direct questionId match (fallback)
+          const fallbackNode = flow.nodes.find(node => node.id === questionId);
+          if (fallbackNode) {
+            nodeId = fallbackNode.id;
+            console.log(`Using fallback nodeId mapping: ${questionId} -> ${nodeId}`);
           }
         }
         
@@ -233,12 +269,44 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
           value,
           type: questionType
         };
-      });
+      }).filter(response => response.nodeId); // Filter out responses without nodeId
+
+      // Check if we lost any responses due to missing nodeIds
+      const originalCount = Object.keys(data).length;
+      const validCount = responses.length;
+      
+      if (validCount < originalCount) {
+        const missingCount = originalCount - validCount;
+        console.error(`Warning: ${missingCount} form field(s) could not be mapped to nodeIds and will be excluded from submission`);
+        
+        // Optionally show a warning to the user, but continue with submission
+        // You could uncomment the next line to block submission instead:
+        // throw new Error(`Some form fields could not be processed. Please check the form configuration.`);
+      }
+
+      // Calculate completion time in seconds
+      const completionTime = Math.round((new Date().getTime() - formStartTime.getTime()) / 1000);
+      
+      // Detect device type based on user agent
+      const userAgent = navigator.userAgent;
+      let deviceType: 'desktop' | 'tablet' | 'mobile' = 'desktop';
+      if (/tablet|ipad|playbook|silk/i.test(userAgent)) {
+        deviceType = 'tablet';
+      } else if (/mobile|iphone|ipod|android|blackberry|opera|mini|windows\sce|palm|smartphone|iemobile/i.test(userAgent)) {
+        deviceType = 'mobile';
+      }
 
       const responseData: FormResponse = {
         flowId: flow.id,
         responses,
-        submittedAt: new Date().toISOString()
+        metadata: {
+          userAgent: navigator.userAgent,
+          referrer: document.referrer,
+          completionTime,
+          deviceType,
+          startedAt: formStartTime.toISOString(),
+          submittedAt: new Date().toISOString()
+        }
       };
 
       await submitFormResponse(responseData);
@@ -478,6 +546,11 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
   // Validation rules helper
   const getValidationRules = (validationRules: ValidationRule[]) => {
     const rules: any = {};
+    
+    // Ensure validationRules is an array
+    if (!Array.isArray(validationRules)) {
+      return rules;
+    }
     
     validationRules.forEach(rule => {
       switch (rule.type) {

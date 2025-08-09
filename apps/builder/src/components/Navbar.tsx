@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFlowStore } from '../stores/flowStore';
 import { QuickStartModal } from './QuickStartModal';
@@ -8,14 +8,14 @@ export function Navbar() {
   const [showQuickStart, setShowQuickStart] = useState(false);
   const { createNewFlow, isLoading } = useFlowStore();
 
-  const handleCreateFlow = async (template?: any) => {
+  const handleCreateFlow = async (template?: any, flowName?: string) => {
     try {
       let newFlow;
       
       if (template && template.nodes && template.nodes.length > 0) {
         // Create flow with template - clean payload
         const cleanFlowData = {
-          title: template.name,
+          title: flowName || template.name,
           description: template.description,
           nodes: template.nodes,
           settings: {
@@ -32,10 +32,12 @@ export function Navbar() {
         newFlow = await flowsApi.create(cleanFlowData);
       } else {
         // Create blank flow
-        newFlow = await createNewFlow();
+        newFlow = await createNewFlow(flowName);
       }
       
-      window.location.href = `/builder/${newFlow.id}`;
+      if (newFlow?.id) {
+        window.location.href = `/builder/${newFlow.id}`;
+      }
     } catch (error) {
       console.error('Failed to create flow:', error);
     }
@@ -77,12 +79,7 @@ export function Navbar() {
               >
                 Dashboard
               </Link>
-              <Link 
-                to="/builder" 
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Builder
-              </Link>
+
               <Link 
                 to="/settings" 
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"

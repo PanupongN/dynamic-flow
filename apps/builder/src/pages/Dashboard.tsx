@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink } from 'lucide-react';
 import { useFlowStore } from '../stores/flowStore';
@@ -8,7 +8,7 @@ import { useToast } from '../hooks/useToast';
 
 export function Dashboard() {
   const [showQuickStart, setShowQuickStart] = useState(false);
-  const { addToast } = useToast();
+  const { toast } = useToast();
   
   const { 
     flows, 
@@ -23,14 +23,14 @@ export function Dashboard() {
     loadFlows();
   }, [loadFlows]);
 
-  const handleCreateFlow = async (template?: any) => {
+  const handleCreateFlow = async (template?: any, flowName?: string) => {
     try {
       let newFlow;
       
       if (template && template.nodes && template.nodes.length > 0) {
         // Create flow with template - clean payload
         const cleanFlowData = {
-          title: template.name,
+          title: flowName || template.name,
           description: template.description,
           nodes: template.nodes,
           settings: {
@@ -47,11 +47,13 @@ export function Dashboard() {
         newFlow = await flowsApi.create(cleanFlowData);
       } else {
         // Create blank flow
-        newFlow = await createNewFlow();
+        newFlow = await createNewFlow(flowName);
       }
       
       // Navigate to builder with the new flow ID
-      window.location.href = `/builder/${newFlow.id}`;
+      if (newFlow?.id) {
+        window.location.href = `/builder/${newFlow.id}`;
+      }
     } catch (error) {
       console.error('Failed to create flow:', error);
     }
@@ -64,16 +66,18 @@ export function Dashboard() {
   const handlePublishFlow = async (flowId: string) => {
     try {
       await publishFlow(flowId);
+      toast.success('Flow published successfully');
     } catch (error) {
       console.error('Failed to publish flow:', error);
+      toast.error('Failed to publish flow');
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString();
   };
 
-  const getResponseCount = (flowId: string) => {
+  const getResponseCount = (_flowId: string) => {
     // TODO: Implement real response count from API
     return Math.floor(Math.random() * 200);
   };
@@ -87,20 +91,10 @@ export function Dashboard() {
     
     try {
       await navigator.clipboard.writeText(url);
-      addToast({
-        id: Date.now().toString(),
-        title: 'URL Copied!',
-        message: 'Form URL has been copied to clipboard.',
-        type: 'success'
-      });
+      toast.success('URL Copied!', 'Form URL has been copied to clipboard.');
     } catch (error) {
       console.error('Failed to copy URL:', error);
-      addToast({
-        id: Date.now().toString(),
-        title: 'Copy Failed',
-        message: 'Could not copy URL to clipboard.',
-        type: 'error'
-      });
+      toast.error('Copy Failed', 'Could not copy URL to clipboard.');
     }
   };
 
