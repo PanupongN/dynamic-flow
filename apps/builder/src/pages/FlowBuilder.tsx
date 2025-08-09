@@ -6,6 +6,7 @@ import { LogicBuilder } from '../components/LogicBuilder';
 
 import { ThemeSelector, ColorPaletteDisplay } from '../components/ThemeSelector';
 import { ColorSystemConfig } from '../components/ColorSystemConfig';
+import { DraftStatusIndicator } from '../components/DraftStatusIndicator';
 import { createAdvancedTheme, type AdvancedThemeConfig } from '../themes/colorSystem';
 import { useFlowStore } from '../stores/flowStore';
 import { Play, Save, Settings, Eye, GitBranch } from 'lucide-react';
@@ -27,7 +28,7 @@ interface Step {
 
 interface Field {
   id: string;
-  type: 'text_input' | 'email_input' | 'number_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
+  type: 'text_input' | 'email_input' | 'number_input' | 'phone_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -461,6 +462,9 @@ export function FlowBuilder() {
           </button>
         </div>
       </div>
+
+      {/* Draft Status Indicator */}
+      <DraftStatusIndicator currentFlow={currentFlow} />
 
       {/* Settings Panel */}
       {showSettings && (

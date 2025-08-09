@@ -11,6 +11,7 @@ export type NodeType =
   | 'text_input'
   | 'email_input'
   | 'number_input'
+  | 'phone_input'
   | 'single_choice'
   | 'multiple_choice'
   | 'rating'

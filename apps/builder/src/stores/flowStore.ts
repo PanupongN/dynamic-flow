@@ -77,7 +77,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             { id: 'first_name', type: 'text_input', label: 'First Name', required: true },
             { id: 'last_name', type: 'text_input', label: 'Last Name', required: true },
             { id: 'email', type: 'email_input', label: 'Email', required: true },
-            { id: 'phone', type: 'text_input', label: 'Phone', required: true }
+            { id: 'phone', type: 'phone_input', label: 'Phone Number', required: true }
           ]
         },
         connections: [{ targetNodeId: 'how_many_people' }]

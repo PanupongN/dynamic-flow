@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink, Trash2 } from 'lucide-react';
 import { useFlowStore } from '../stores/flowStore';
 import { AnalyticsDashboard } from '../components/AnalyticsCard';
+import { DraftStatusBadge, DraftDetailButton } from '../components/DraftStatusIndicator';
 import { useToast } from '../hooks/useToast';
 
 export function Dashboard() {
@@ -202,12 +203,7 @@ export function Dashboard() {
                       }`}>
                         {flow.status === 'draft' ? 'Draft' : flow.status}
                       </span>
-                      {/* Show unpublished changes indicator */}
-                      {flow.status === 'draft' && flow.publishedAt && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Has unpublished changes
-                        </span>
-                      )}
+                      <DraftStatusBadge currentFlow={flow} size="small" />
                       <span className="text-sm text-gray-500">{getResponseCount(flow.id)} responses</span>
                       <span className="text-sm text-gray-500">Created {formatDate(flow.createdAt)}</span>
                       {flow.updatedAt && flow.updatedAt !== flow.createdAt && (
@@ -242,6 +238,13 @@ export function Dashboard() {
                             </button>
                           </div>
                         </div>
+                      </div>
+                    )}
+                    
+                    {/* Draft Changes Detail */}
+                    {flow.status === 'published' && (
+                      <div className="mt-3">
+                        <DraftDetailButton flowId={flow.id} size="small" />
                       </div>
                     )}
                   </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { submitFormResponse } from '../services/api';
+import { PhoneInputField } from './PhoneInputField';
 import {
   Flow,
   FlowNode,
@@ -222,7 +223,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
       // Convert form data to response format
       const responses = Object.entries(data).map(([questionId, value]) => {
         // Find the question to get its type and node
-        let questionType = 'text_input';
+        let questionType: string = 'text_input';
         let nodeId = '';
         
         for (const node of flow.nodes) {
@@ -418,6 +419,20 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                     {fieldState.error && (
                       <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
+                  </div>
+                );
+
+              case 'phone_input':
+                return (
+                  <div>
+                    <PhoneInputField
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={question.placeholder || "Enter phone number"}
+                      required={required}
+                      error={!!fieldState.error}
+                      errorMessage={fieldState.error?.message}
+                    />
                   </div>
                 );
 

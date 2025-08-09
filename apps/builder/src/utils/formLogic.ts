@@ -30,7 +30,7 @@ export interface LoopConfig {
 
 export interface Question {
   id: string;
-  type: 'text_input' | 'email_input' | 'number_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
+  type: 'text_input' | 'email_input' | 'number_input' | 'phone_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
   label: string;
   description?: string;
   required?: boolean;

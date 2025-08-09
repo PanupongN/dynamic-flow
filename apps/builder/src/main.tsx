@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 // import { ThemeProvider } from '@dynamic-flow/ui';
 import App from './App';
 import './index.css';
+import './styles/phone-input.css';
 
 const queryClient = new QueryClient();
 

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Plus, Trash2, Move, Type, Mail, Hash, Calendar, Upload, List, CheckSquare } from 'lucide-react';
+import { Plus, Trash2, Move, Type, Mail, Hash, Phone, Calendar, Upload, List, CheckSquare } from 'lucide-react';
 
 interface Field {
   id: string;
-  type: 'text_input' | 'email_input' | 'number_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
+  type: 'text_input' | 'email_input' | 'number_input' | 'phone_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
   label: string;
   required: boolean;
   placeholder?: string;
@@ -42,6 +42,7 @@ const FIELD_TYPES = [
   { id: 'textarea', label: 'Text Area', icon: Type, description: 'Multi-line text' },
   { id: 'email_input', label: 'Email', icon: Mail, description: 'Email address' },
   { id: 'number_input', label: 'Number', icon: Hash, description: 'Numeric input' },
+  { id: 'phone_input', label: 'Phone Number', icon: Phone, description: 'Phone with country code' },
   { id: 'date_picker', label: 'Date', icon: Calendar, description: 'Date selection' },
   { id: 'single_choice', label: 'Single Choice', icon: List, description: 'Radio buttons' },
   { id: 'multiple_choice', label: 'Multiple Choice', icon: CheckSquare, description: 'Checkboxes' },
