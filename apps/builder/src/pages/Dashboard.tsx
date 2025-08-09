@@ -95,7 +95,7 @@ export function Dashboard() {
   };
 
   const getPublicFormUrl = (flowId: string) => {
-    return `${window.location.origin}/public/${flowId}`;
+    return `http://localhost:3003/public/${flowId}`;
   };
 
   const copyFormUrl = async (flowId: string) => {
@@ -257,21 +257,21 @@ export function Dashboard() {
                     >
                       <Edit className="w-4 h-4" />
                     </Link>
-                    <Link 
-                      to={`/preview/${flow.id}`}
+                    <button
+                      onClick={() => window.open(`http://localhost:3003/preview/${flow.id}`, '_blank')}
                       className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
                       title="Preview Draft"
                     >
                       <Eye className="w-4 h-4" />
-                    </Link>
+                    </button>
                     {flow.status === 'published' && (
-                      <Link 
-                        to={`/form/${flow.id}`}
+                      <button 
+                        onClick={() => window.open(`http://localhost:3003/form/${flow.id}`, '_blank')}
                         className="p-2 text-green-400 hover:text-green-600 hover:bg-green-100 rounded"
                         title="View Published Form"
                       >
                         <ExternalLink className="w-4 h-4" />
-                      </Link>
+                      </button>
                     )}
                     
                     {/* Publish/Unpublish Button */}

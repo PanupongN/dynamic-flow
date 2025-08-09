@@ -4,8 +4,7 @@ import { FormRenderer } from '../components/FormRenderer';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getTheme, generateCSSVariables } from '../themes';
 
-
-// Local type definition (copied from @dynamic-flow/types)
+// Local type definition
 interface Flow {
   id: string;
   title: string;
@@ -68,7 +67,7 @@ export const PublicFormView: React.FC = () => {
           if (err.message.includes('404') || err.message.includes('not found')) {
             setError('This form is not currently available or not published. Please make sure the form has been published and the flow ID is correct.');
           } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-            setError('Cannot connect to API server (http://localhost:3001). Please make sure the API server is running.');
+            setError('Cannot connect to API server. Please make sure the API server is running.');
           } else if (err.message.includes('500')) {
             setError('Server error. Please try again later.');
           } else {
@@ -85,8 +84,8 @@ export const PublicFormView: React.FC = () => {
     loadFlow();
   }, [flowId]);
 
-  const handleSubmitSuccess = (response: any) => {
-    console.log('Form submitted successfully:', response);
+  const handleSubmitSuccess = () => {
+    console.log('Form submitted successfully');
     setIsSubmitted(true);
 
     // If there's a redirect URL, navigate to it
@@ -96,13 +95,6 @@ export const PublicFormView: React.FC = () => {
       }, 1000);
     }
   };
-
-  // Handle form submission errors - currently not used
-  // const handleSubmitError = (error: string) => {
-  //   console.error('Form submission error:', error);
-  //   // Show error message to user
-  //   alert(`Submission failed: ${error}`);
-  // };
 
   // Loading state
   if (loading) {
@@ -244,8 +236,6 @@ export const PublicFormView: React.FC = () => {
           border-color: var(--color-primary);
         }
         
-
-        
         .form-error-message {
           color: var(--color-negative-100);
           font-weight: 500;
@@ -380,7 +370,6 @@ export const PublicFormView: React.FC = () => {
           background-color: var(--color-information-120);
         }
 
-        
         .form-step {
           padding: var(--spacing-xl);
         }

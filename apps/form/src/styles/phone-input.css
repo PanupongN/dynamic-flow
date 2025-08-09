@@ -1,0 +1,154 @@
+/* Custom styles for react-phone-number-input */
+
+.PhoneInput {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.PhoneInputCountry {
+  border: 1px solid var(--phone-input-border, #d1d5db) !important;
+  border-radius: var(--border-radius-md, 0.375rem) !important;
+  padding: var(--spacing-sm, 8px) !important;
+  background: var(--phone-input-background, white) !important;
+  margin: 0 !important;
+}
+
+.PhoneInputCountryIcon {
+  width: 24px !important;
+  height: 16px !important;
+  border-radius: 2px !important;
+}
+
+.PhoneInputCountrySelect {
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.PhoneInputCountrySelectArrow {
+  margin-left: 4px !important;
+  color: #6b7280 !important;
+}
+
+.PhoneInputInput {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* Phone Input Field styling */
+.phone-input-wrapper .PhoneInput {
+  width: 100% !important;
+}
+
+.phone-input-wrapper .PhoneInputInput {
+  width: 100% !important;
+  padding: var(--spacing-sm, 8px) var(--spacing-md, 12px) !important;
+  border: 1px solid var(--phone-input-border, #d1d5db) !important;
+  border-radius: var(--border-radius-md, 0.375rem) !important;
+  font-size: var(--font-size-sm, 14px) !important;
+  background: var(--phone-input-background, white) !important;
+  color: var(--phone-input-text, #111827) !important;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.phone-input-wrapper .PhoneInputInput:focus {
+  outline: none !important;
+  border-color: var(--phone-input-border-focus, #3b82f6) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.phone-input-wrapper .PhoneInputInput:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* Error states */
+.phone-input-wrapper.error .PhoneInputInput {
+  border-color: var(--phone-input-border-error, #ef4444) !important;
+}
+
+.phone-input-wrapper.error .PhoneInputInput:focus {
+  border-color: var(--phone-input-border-error, #ef4444) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.phone-input-wrapper.error .PhoneInputCountry {
+  border-color: var(--phone-input-border-error, #ef4444) !important;
+}
+
+/* Required field indicator (optional) */
+.phone-input-wrapper.required .PhoneInputInput::after {
+  content: ' *';
+  color: #ef4444;
+}
+
+/* Custom focus colors using CSS variables */
+.phone-input-wrapper .PhoneInput {
+  --PhoneInput-color--focus: #3b82f6;
+}
+
+.phone-input-wrapper.error .PhoneInput {
+  --PhoneInput-color--focus: #ef4444;
+}
+
+/* Form field specific styling for FormRenderer */
+.form-field-input .PhoneInput {
+  width: 100% !important;
+}
+
+.form-field-input .PhoneInputInput {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.375rem !important;
+  font-size: 14px !important;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.form-field-input .PhoneInputInput:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .PhoneInputCountry {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+  }
+  
+  .PhoneInputInput {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+    color: #f9fafb !important;
+  }
+  
+  .PhoneInputCountrySelectArrow {
+    color: #9ca3af !important;
+  }
+}
+
+/* Form error message styling */
+.form-error-message {
+  color: #ef4444 !important;
+  font-size: 0.875rem !important;
+  margin-top: 0.25rem !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .PhoneInput {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+  }
+  
+  .PhoneInputCountry {
+    width: auto !important;
+    margin-bottom: 0 !important;
+  }
+}

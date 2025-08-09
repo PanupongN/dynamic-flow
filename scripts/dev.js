@@ -43,7 +43,7 @@ const apiProcess = spawnProcess(
   { cwd: join(rootDir, 'apps/api') }
 );
 
-// Wait a bit for API to start, then start frontend
+// Wait a bit for API to start, then start frontend apps
 setTimeout(() => {
   const builderProcess = spawnProcess(
     'Builder App',
@@ -51,6 +51,16 @@ setTimeout(() => {
     ['run', 'dev'],
     { cwd: join(rootDir, 'apps/builder') }
   );
+  
+  // Start Form App with slight delay
+  setTimeout(() => {
+    const formProcess = spawnProcess(
+      'Form App',
+      'npm',
+      ['run', 'dev'],
+      { cwd: join(rootDir, 'apps/form') }
+    );
+  }, 2000);
 }, 3000);
 
 // Handle process termination
@@ -68,5 +78,6 @@ process.on('SIGINT', () => {
 console.log('🔗 URLs:');
 console.log('   API Server: http://localhost:3001');
 console.log('   Builder App: http://localhost:3000');
+console.log('   Form App: http://localhost:3003');
 console.log('   Health Check: http://localhost:3001/health');
 console.log('\n💡 Press Ctrl+C to stop all servers\n');

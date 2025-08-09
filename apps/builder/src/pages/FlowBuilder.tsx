@@ -431,13 +431,13 @@ export function FlowBuilder() {
               <Save className="w-4 h-4" />
               {isSaving ? 'Saving Draft...' : 'Save Draft'}
             </button>
-            <Link 
-              to={`/preview/${flowId}`}
+            <button 
+              onClick={() => window.open(`http://localhost:3003/preview/${flowId}`, '_blank')}
               className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
             >
               <Eye className="w-4 h-4" />
               Preview
-            </Link>
+            </button>
             <button 
               onClick={handlePublish}
               disabled={isSaving}

@@ -3,8 +3,9 @@ import { useParams } from 'react-router-dom';
 import { FormRenderer } from '../components/FormRenderer';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getTheme, generateCSSVariables } from '../themes';
+import { flowsApi } from '../services/api';
 
-// Local type definition (copied from @dynamic-flow/types)
+// Local type definition
 interface Flow {
   id: string;
   title: string;
@@ -55,7 +56,6 @@ export const PreviewFormView: React.FC = () => {
         setLoading(true);
         
         // Use the API service to load draft flow data for preview
-        const { flowsApi } = await import('../services/api');
         const flowData = await flowsApi.getDraft(flowId);
         
         setFlow(flowData);
@@ -68,7 +68,7 @@ export const PreviewFormView: React.FC = () => {
           if (err.message.includes('404') || err.message.includes('not found')) {
             setError('Flow not found. Make sure the flow exists and has been saved.');
           } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-            setError('Cannot connect to API server. Make sure the API server is running on http://localhost:3001');
+            setError('Cannot connect to API server. Make sure the API server is running.');
           } else if (err.message.includes('500')) {
             setError('Internal server error. Please try again later.');
           } else {
@@ -139,12 +139,6 @@ export const PreviewFormView: React.FC = () => {
     themeId,
     themeName: theme.name,
     primaryColor: theme.colors.primary.main,
-    generatedCSS: themeCSS.substring(0, 500) + '...',
-    semanticColorsTest: {
-      negativeInCSS: themeCSS.includes('--color-negative-100'),
-      successInCSS: themeCSS.includes('--color-success-100'),
-      warningInCSS: themeCSS.includes('--color-warning-100')
-    }
   });
 
   return (
@@ -152,7 +146,7 @@ export const PreviewFormView: React.FC = () => {
       {/* Apply theme CSS variables */}
       <style dangerouslySetInnerHTML={{ __html: themeCSS }} />
       
-      {/* Apply form styling with theme */}
+      {/* Enhanced form styling with theme */}
       <style dangerouslySetInnerHTML={{ __html: `
         .form-container {
           font-family: var(--font-family);
@@ -194,27 +188,11 @@ export const PreviewFormView: React.FC = () => {
           border-color: var(--color-primary);
         }
         
-
-        
-        .form-error-message {
-          color: var(--color-negative-100);
-          font-weight: 500;
-        }
-        
-        /* Success States - ใช้ success color */
-        .success-icon-container {
-          background-color: var(--color-success-60);
-        }
-        
-        .success-icon {
-          color: var(--color-success-100);
-        }
-        
-        /* Submit Error - ใช้ negative color */
-        .form-submit-error {
-          background-color: var(--color-negative-60);
-          border: 1px solid var(--color-negative-100);
-          color: var(--color-negative-120);
+        .form-field input:hover:not(:focus), 
+        .form-field textarea:hover:not(:focus), 
+        .form-field select:hover:not(:focus),
+        .form-field-input:hover:not(:focus) {
+          border-color: var(--color-border-dark);
         }
         
         button[type="submit"], 
@@ -239,7 +217,6 @@ export const PreviewFormView: React.FC = () => {
           transform: translateY(-1px);
         }
         
-        /* Semantic Button Colors */
         .btn-secondary {
           background-color: var(--color-background-paper);
           color: var(--color-text-primary);
@@ -256,77 +233,15 @@ export const PreviewFormView: React.FC = () => {
           border-color: var(--color-gray-400);
         }
         
-        .btn-success {
-          background-color: var(--color-success-100);
-          color: white;
-          border: none;
-          padding: var(--spacing-sm) var(--spacing-lg);
-          border-radius: var(--border-radius-md);
+        .form-error-message {
+          color: var(--color-negative-100);
           font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
         }
         
-        .btn-success:hover {
-          background-color: var(--color-success-120);
-        }
-        
-        .btn-warning {
-          background-color: var(--color-warning-100);
-          color: var(--color-warning-120);
-          border: none;
-          padding: var(--spacing-sm) var(--spacing-lg);
-          border-radius: var(--border-radius-md);
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-warning:hover {
-          background-color: var(--color-warning-120);
-          color: white;
-        }
-        
-        .btn-error {
-          background-color: var(--color-negative-100);
-          color: white;
-          border: none;
-          padding: var(--spacing-sm) var(--spacing-lg);
-          border-radius: var(--border-radius-md);
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-error:hover {
-          background-color: var(--color-negative-120);
-        }
-        
-        .btn-info {
-          background-color: var(--color-information-100);
-          color: white;
-          border: none;
-          padding: var(--spacing-sm) var(--spacing-lg);
-          border-radius: var(--border-radius-md);
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-info:hover {
-          background-color: var(--color-information-120);
-        }
-        
-        .form-step {
-          padding: var(--spacing-xl);
-        }
-        
-        .form-step h2 {
-          color: var(--color-text-primary);
-          font-family: var(--font-family);
-          font-size: var(--font-size-xl);
-          font-weight: var(--font-weight-bold);
-          margin-bottom: var(--spacing-md);
+        .form-submit-error {
+          background-color: var(--color-negative-60);
+          border: 1px solid var(--color-negative-100);
+          color: var(--color-negative-120);
         }
         
         .choice-option {

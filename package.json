@@ -12,7 +12,8 @@
     "clean": "turbo run clean",
     "type-check": "turbo run type-check",
     "api": "npm run dev --workspace=apps/api",
-    "builder": "npm run dev --workspace=apps/builder"
+    "builder": "npm run dev --workspace=apps/builder",
+    "form": "npm run dev --workspace=apps/form"
   },
   "workspaces": [
     "apps/*",
