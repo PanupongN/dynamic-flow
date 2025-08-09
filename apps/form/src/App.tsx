@@ -1,6 +1,5 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { FormView } from './pages/FormView';
 import { PreviewFormView } from './pages/PreviewFormView';
 import { PublicFormView } from './pages/PublicFormView';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -11,7 +10,7 @@ function App() {
       <Router>
         <Routes>
           {/* Main route for end users to fill forms */}
-          <Route path="/form/:flowId" element={<FormView />} />
+          <Route path="/form/:flowId" element={<PublicFormView />} />
           
           {/* Public route (alias for form route) */}
           <Route path="/public/:flowId" element={<PublicFormView />} />
