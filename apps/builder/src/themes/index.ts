@@ -387,7 +387,9 @@ export function getTheme(themeId: string): CompanyTheme {
 }
 
 export function getAllThemes(): CompanyTheme[] {
-  return Object.values(companyThemes);
+  const themes = Object.values(companyThemes);
+  console.log('🎨 getAllThemes - Available themes:', themes.map(t => ({ id: t.id, name: t.name })));
+  return themes;
 }
 
 export function createCustomTheme(

@@ -247,21 +247,23 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         status: flow.status
       };
       
-      console.log('saveFlow: Sending to API:', JSON.stringify(cleanFlow, null, 2));
+      console.log('🏪 FlowStore.saveFlow - Payload theme:', cleanFlow.theme);
       
       if (existingIndex >= 0) {
         // Update existing flow
-        console.log('saveFlow: Updating existing flow', flow.id);
+        console.log('🏪 FlowStore.saveFlow - Updating existing flow');
         savedFlow = await flowsApi.update(flow.id, cleanFlow);
-        console.log('saveFlow: API response:', JSON.stringify(savedFlow, null, 2));
+        console.log('🏪 FlowStore.saveFlow - API response theme:', savedFlow.theme);
         flows[existingIndex] = savedFlow;
       } else {
         // Create new flow
-        console.log('saveFlow: Creating new flow');
         savedFlow = await flowsApi.create(cleanFlow);
-        console.log('saveFlow: API response:', JSON.stringify(savedFlow, null, 2));
         flows.push(savedFlow);
       }
+      
+      console.log('🏪 FlowStore - Setting currentFlow with theme:', savedFlow.theme);
+      console.log('🏪 FlowStore - Setting currentFlow with theme.id:', savedFlow.theme?.id);
+      console.log('🏪 FlowStore - Full savedFlow object:', savedFlow);
       
       set({ 
         flows: [...flows], 
@@ -288,6 +290,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       
       const { flowsApi } = await import('../services/api');
       const publishedFlow = await flowsApi.publish(flowId);
+      console.log('🚀 FlowStore.publishFlow - Published flow theme:', publishedFlow.theme);
       
       const { currentFlow, flows } = get();
       const flowIndex = flows.findIndex(f => f.id === flowId);
@@ -297,6 +300,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       }
       
       if (currentFlow && currentFlow.id === flowId) {
+        console.log('🚀 FlowStore.publishFlow - Setting currentFlow theme:', publishedFlow.theme);
         set({ currentFlow: publishedFlow });
       }
       

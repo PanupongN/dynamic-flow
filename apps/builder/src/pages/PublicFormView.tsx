@@ -57,6 +57,7 @@ export const PublicFormView: React.FC = () => {
         // Use the API service to load published flow data
         const { flowsApi } = await import('../services/api');
         const flowData = await flowsApi.getPublished(flowId);
+        console.log('📄 PublicFormView - Loaded published flow theme:', flowData.theme);
         
         setFlow(flowData);
         setError(null);

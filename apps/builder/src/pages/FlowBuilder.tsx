@@ -145,6 +145,11 @@ export function FlowBuilder() {
         try {
           const { flowsApi } = await import('../services/api');
           const flow = await flowsApi.getById(flowId);
+          
+          console.log('🔄 FlowBuilder.loadFlow - Loaded flow:', flow);
+          console.log('🔄 FlowBuilder.loadFlow - Flow theme:', flow.theme);
+          console.log('🔄 FlowBuilder.loadFlow - Flow theme.id:', flow.theme?.id);
+          
           setCurrentFlow(flow);
           
           // Convert flow nodes to steps
@@ -195,7 +200,8 @@ export function FlowBuilder() {
 
     // Set new timeout
     autoSaveTimeoutRef.current = setTimeout(async () => {
-      console.log('Auto-saving flow (steps changed)...');
+      console.log('🔄 Auto-saving flow (steps changed)...');
+      console.log('🔄 Auto-save - currentFlow.theme before save:', currentFlow?.theme);
       
       try {
         const updatedFlow = {
@@ -203,6 +209,7 @@ export function FlowBuilder() {
           nodes: convertStepsToNodes(steps)
         };
         
+        console.log('🔄 Auto-save - updatedFlow.theme:', updatedFlow.theme);
         await saveFlow(updatedFlow);
         
         // Update the last saved state only after successful save
@@ -224,7 +231,8 @@ export function FlowBuilder() {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [steps, currentFlow?.title, currentFlow?.description, currentFlow?.settings, currentFlow?.theme, currentFlow?.status, flowId]);
+  }, [steps, currentFlow?.title, currentFlow?.description, currentFlow?.settings, currentFlow?.status, flowId]);
+  // Note: currentFlow?.theme intentionally excluded to prevent race condition with theme changes
 
   const handleSave = async () => {
     if (!currentFlow) return;
@@ -287,7 +295,9 @@ export function FlowBuilder() {
       await flowsApi.update(flowId!, cleanFlow);
       
       // Then publish
+      console.log('🚀 Publishing flow...');
       const publishedFlow = await flowsApi.publish(flowId!);
+      console.log('🚀 Published flow received - theme:', publishedFlow.theme);
       
       // Update current flow
       setCurrentFlow(publishedFlow);
@@ -361,37 +371,44 @@ export function FlowBuilder() {
     if (!currentFlow) return;
     
     try {
-      console.log('Changing theme to:', themeId);
+      console.log('🎨 FlowBuilder.handleThemeChange - Changing theme to:', themeId);
       
+      // Ensure theme object structure is correct
       const updatedFlow = { 
         ...currentFlow, 
         theme: { 
           ...currentFlow.theme,
-          id: themeId
+          id: themeId  // Make sure id is properly set
         } 
       };
       
-      console.log('Updated flow theme data:', updatedFlow.theme);
+      console.log('🎨 FlowBuilder.handleThemeChange - Updated flow theme data:', updatedFlow.theme);
+      console.log('🎨 FlowBuilder.handleThemeChange - Theme id after update:', updatedFlow.theme.id);
       
       // Update locally first
+      console.log('🎨 FlowBuilder.handleThemeChange - Setting currentFlow locally with theme:', updatedFlow.theme);
       setCurrentFlow(updatedFlow);
       
       // Save to API immediately to persist theme change
       try {
-        console.log('Saving theme to API:', updatedFlow.theme);
+        console.log('🎨 FlowBuilder.handleThemeChange - Saving theme to API:', updatedFlow.theme);
         await saveFlow(updatedFlow);
-        console.log('Theme saved to API successfully');
+        console.log('🎨 FlowBuilder.handleThemeChange - Theme saved to API successfully');
         
-        // Verify the save
+        // Verify the save by refetching the flow
         const { flowsApi } = await import('../services/api');
         const savedFlow = await flowsApi.getById(flowId!);
-        console.log('Verified saved theme:', savedFlow.theme);
+        console.log('🎨 FlowBuilder.handleThemeChange - Verified saved flow theme:', savedFlow.theme);
+        console.log('🎨 FlowBuilder.handleThemeChange - Verified saved flow theme.id:', savedFlow.theme?.id);
+        
+        // Update currentFlow with the verified data
+        setCurrentFlow(savedFlow);
       } catch (apiError) {
-        console.warn('Failed to save theme to API:', apiError);
+        console.warn('🎨 FlowBuilder.handleThemeChange - Failed to save theme to API:', apiError);
       }
       
     } catch (error) {
-      console.error('Failed to update theme:', error);
+      console.error('🎨 FlowBuilder.handleThemeChange - Failed to update theme:', error);
     }
   };
 
@@ -430,14 +447,8 @@ export function FlowBuilder() {
       
       // Save to API
       try {
-        console.log('Saving advanced theme to API:', updatedFlow.theme);
         await saveFlow(updatedFlow);
         console.log('Advanced theme saved successfully');
-        
-        // Verify the save
-        const { flowsApi } = await import('../services/api');
-        const savedFlow = await flowsApi.getById(flowId!);
-        console.log('Verified saved advanced theme:', savedFlow.theme);
       } catch (apiError) {
         console.warn('Failed to save advanced theme:', apiError);
       }
@@ -665,11 +676,20 @@ export function FlowBuilder() {
                     selectedThemeId={currentFlow?.theme?.id || 'default'}
                     onThemeChange={handleThemeChange}
                   />
+                  <div className="text-xs text-gray-500 mt-1 space-y-1">
+                    <div>Debug: currentFlow.theme = {JSON.stringify(currentFlow?.theme)}</div>
+                    <div>Debug: selectedThemeId = {currentFlow?.theme?.id || 'default'}</div>
+                    <div>Debug: theme object keys = {currentFlow?.theme ? Object.keys(currentFlow.theme).join(', ') : 'none'}</div>
+                    <div>Debug: typeof theme.id = {typeof currentFlow?.theme?.id}, value = '{currentFlow?.theme?.id}'</div>
+                  </div>
                 </div>
 
                 {/* Color Palette Preview */}
                 <div>
                   <ColorPaletteDisplay themeId={currentFlow?.theme?.id || 'default'} />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Debug: ColorPaletteDisplay themeId = {currentFlow?.theme?.id || 'default'}
+                  </div>
                 </div>
 
                 <div className="text-xs text-gray-500">

@@ -12,7 +12,19 @@ export function ThemeSelector({ selectedThemeId, onThemeChange, className = '' }
   const [isOpen, setIsOpen] = useState(false);
   const [previewTheme, setPreviewTheme] = useState<string | null>(null);
   const themes = getAllThemes();
-  const selectedTheme = themes.find(t => t.id === selectedThemeId) || themes[0];
+  
+  // Handle different theme ID formats
+  let actualThemeId = selectedThemeId;
+  if (!actualThemeId || actualThemeId === 'undefined') {
+    actualThemeId = 'default';
+  }
+  
+  const selectedTheme = themes.find(t => t.id === actualThemeId) || themes[0];
+
+  console.log('🎨 ThemeSelector - selectedThemeId:', selectedThemeId);
+  console.log('🎨 ThemeSelector - actualThemeId:', actualThemeId);
+  console.log('🎨 ThemeSelector - selectedTheme:', selectedTheme);
+  console.log('🎨 ThemeSelector - available themes:', themes.map(t => t.id));
 
   const handleThemeSelect = (themeId: string) => {
     onThemeChange(themeId);
@@ -131,7 +143,7 @@ export function ThemeSelector({ selectedThemeId, onThemeChange, className = '' }
                   onMouseEnter={() => setPreviewTheme(theme.id)}
                   onMouseLeave={() => setPreviewTheme(null)}
                   className={`w-full text-left p-2 rounded-md hover:bg-gray-50 transition-colors relative ${
-                    selectedThemeId === theme.id ? 'bg-blue-50 border border-blue-200' : ''
+                    actualThemeId === theme.id ? 'bg-blue-50 border border-blue-200' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -156,7 +168,7 @@ export function ThemeSelector({ selectedThemeId, onThemeChange, className = '' }
                       </div>
                     </div>
                     
-                    {selectedThemeId === theme.id && (
+                    {actualThemeId === theme.id && (
                       <Check className="w-5 h-5 text-blue-600 ml-2" />
                     )}
                   </div>
@@ -182,9 +194,13 @@ export function ColorPaletteDisplay({ themeId }: { themeId: string }) {
   const themes = getAllThemes();
   const theme = themes.find(t => t.id === themeId) || themes[0];
 
+  console.log('🎨 ColorPaletteDisplay - themeId:', themeId);
+  console.log('🎨 ColorPaletteDisplay - found theme:', theme);
+
   return (
     <div className="p-4 bg-white border border-gray-200 rounded-lg">
-      <h3 className="font-medium text-gray-900 mb-3">Color Palette</h3>
+      <h3 className="font-medium text-gray-900 mb-3">Color Palette - {theme.name}</h3>
+      <div className="text-xs text-gray-500 mb-2">Theme ID: {themeId}</div>
       
       <div className="space-y-3">
         {/* Primary Colors */}
