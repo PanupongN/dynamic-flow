@@ -236,4 +236,9 @@ export const responsesApi = {
   getAnalytics: (flowId: string) => apiClient.getResponseAnalytics(flowId),
 };
 
+// Convenience function for form submission
+export const submitFormResponse = async (responseData: FormResponse) => {
+  return responsesApi.submit(responseData);
+};
+
 export default apiClient;

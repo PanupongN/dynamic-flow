@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Eye, Share, Loader } from 'lucide-react';
+import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink } from 'lucide-react';
 import { useFlowStore } from '../stores/flowStore';
 import { AnalyticsDashboard } from '../components/AnalyticsCard';
 import { QuickStartModal } from '../components/QuickStartModal';
+import { useToast } from '../hooks/useToast';
 
 export function Dashboard() {
   const [showQuickStart, setShowQuickStart] = useState(false);
+  const { addToast } = useToast();
   
   const { 
     flows, 
@@ -74,6 +76,37 @@ export function Dashboard() {
   const getResponseCount = (flowId: string) => {
     // TODO: Implement real response count from API
     return Math.floor(Math.random() * 200);
+  };
+
+  const getPublicFormUrl = (flowId: string) => {
+    return `${window.location.origin}/public/${flowId}`;
+  };
+
+  const copyFormUrl = async (flowId: string) => {
+    const url = getPublicFormUrl(flowId);
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      addToast({
+        id: Date.now().toString(),
+        title: 'URL Copied!',
+        message: 'Form URL has been copied to clipboard.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+      addToast({
+        id: Date.now().toString(),
+        title: 'Copy Failed',
+        message: 'Could not copy URL to clipboard.',
+        type: 'error'
+      });
+    }
+  };
+
+  const openPublicForm = (flowId: string) => {
+    const url = getPublicFormUrl(flowId);
+    window.open(url, '_blank');
   };
 
   return (
@@ -149,45 +182,101 @@ export function Dashboard() {
         {!isLoading && !error && flows.length > 0 && (
           <div className="divide-y">
             {flows.map((flow) => (
-              <div key={flow.id} className="p-6 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">{flow.title}</h3>
-                  <p className="text-gray-500 text-sm mt-1">{flow.description || 'No description'}</p>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      flow.status === 'published' 
-                        ? 'bg-green-100 text-green-800' 
-                        : flow.status === 'draft'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {flow.status}
-                    </span>
-                    <span className="text-sm text-gray-500">{getResponseCount(flow.id)} responses</span>
-                    <span className="text-sm text-gray-500">Created {formatDate(flow.createdAt)}</span>
+              <div key={flow.id} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-gray-900">{flow.title}</h3>
+                    <p className="text-gray-500 text-sm mt-1">{flow.description || 'No description'}</p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        flow.status === 'published' 
+                          ? 'bg-green-100 text-green-800' 
+                          : flow.status === 'draft'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {flow.status === 'draft' ? 'Draft' : flow.status}
+                      </span>
+                      {/* Show unpublished changes indicator */}
+                      {flow.status === 'draft' && flow.publishedAt && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Has unpublished changes
+                        </span>
+                      )}
+                      <span className="text-sm text-gray-500">{getResponseCount(flow.id)} responses</span>
+                      <span className="text-sm text-gray-500">Created {formatDate(flow.createdAt)}</span>
+                      {flow.updatedAt && flow.updatedAt !== flow.createdAt && (
+                        <span className="text-sm text-gray-500">Modified {formatDate(flow.updatedAt)}</span>
+                      )}
+                    </div>
+                    
+                    {/* Published form URL */}
+                    {flow.status === 'published' && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-800 mb-1">Public Form URL:</p>
+                            <code className="text-sm text-green-700 bg-green-100 px-2 py-1 rounded break-all">
+                              {getPublicFormUrl(flow.id)}
+                            </code>
+                          </div>
+                          <div className="flex items-center space-x-1 ml-4">
+                            <button
+                              onClick={() => copyFormUrl(flow.id)}
+                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded"
+                              title="Copy URL"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openPublicForm(flow.id)}
+                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded"
+                              title="Open form in new tab"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Link 
-                    to={`/builder/${flow.id}`}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    title="Edit"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button 
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    title="Preview"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => handlePublishFlow(flow.id)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    title="Publish/Share"
-                  >
-                    <Share className="w-4 h-4" />
-                  </button>
+                  
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Link 
+                      to={`/builder/${flow.id}`}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      title="Edit Draft"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <Link 
+                      to={`/preview/${flow.id}`}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      title="Preview Draft"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    {flow.status === 'published' && (
+                      <Link 
+                        to={`/form/${flow.id}`}
+                        className="p-2 text-green-400 hover:text-green-600 hover:bg-green-100 rounded"
+                        title="View Published Form"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                    )}
+                    <button 
+                      onClick={() => handlePublishFlow(flow.id)}
+                      className={`p-2 rounded ${
+                        flow.status === 'published'
+                          ? 'text-red-400 hover:text-red-600 hover:bg-red-100'
+                          : 'text-blue-400 hover:text-blue-600 hover:bg-blue-100'
+                      }`}
+                      title={flow.status === 'published' ? 'Unpublish' : 'Publish Draft'}
+                    >
+                      <Share className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

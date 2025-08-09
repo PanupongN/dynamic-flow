@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StepBuilder } from '../components/StepBuilder';
 import { FieldBuilder } from '../components/FieldBuilder';
 import { LogicBuilder } from '../components/LogicBuilder';
@@ -370,15 +370,22 @@ export function FlowBuilder() {
               className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? 'Saving Draft...' : 'Save Draft'}
             </button>
+            <Link 
+              to={`/preview/${flowId}`}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Preview
+            </Link>
             <button 
               onClick={handlePublish}
               disabled={isSaving}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
             >
               <Play className="w-4 h-4" />
-              Publish
+              {currentFlow?.status === 'published' ? 'Update Published' : 'Publish'}
             </button>
           </div>
         </div>
