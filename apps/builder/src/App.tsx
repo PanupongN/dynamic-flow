@@ -9,6 +9,7 @@ import { PreviewFormView } from './pages/PreviewFormView';
 import { Navbar } from './components/Navbar';
 import { ToastContainer } from './components/Toast';
 import { useToast } from './hooks/useToast';
+import { CountryDetectionDebug } from './components/CountryDetectionDebug';
 
 function App() {
   const { toasts, removeToast } = useToast();
@@ -31,6 +32,7 @@ function App() {
             </Routes>
       </main>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <CountryDetectionDebug />
     </div>
   );
 }

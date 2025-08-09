@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import flowRoutes from './routes/flows.js';
 import responseRoutes from './routes/responses.js';
+import geolocationRoutes from './routes/geolocation.js';
 import { initializeStorage, getAnalytics } from './utils/storage.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -112,6 +113,7 @@ app.get('/api/analytics', async (req, res) => {
 // Routes
 app.use('/api/flows', flowRoutes);
 app.use('/api/responses', responseRoutes);
+app.use('/api/geo', geolocationRoutes);
 
 // 404 handler
 app.use('*', notFound);

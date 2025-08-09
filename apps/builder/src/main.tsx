@@ -6,8 +6,12 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import App from './App';
 import './index.css';
 import './styles/phone-input.css';
+import { preloadCountryDetection } from './utils/countryDetection';
 
 const queryClient = new QueryClient();
+
+// Preload country detection for faster phone input
+preloadCountryDetection();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
