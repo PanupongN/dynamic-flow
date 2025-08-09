@@ -1,0 +1,51 @@
+{
+  "name": "dynamic-flow",
+  "version": "1.0.0",
+  "description": "Dynamic form builder platform with multi-tenant support",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:turbo": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "type-check": "turbo run type-check",
+    "api": "npm run dev --workspace=apps/api",
+    "builder": "npm run dev --workspace=apps/builder"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@turbo/gen": "^1.10.12",
+    "turbo": "^1.10.12",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2",
+    "prettier": "^3.0.3",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/dynamic-flow.git"
+  },
+  "keywords": [
+    "form-builder",
+    "typeform",
+    "multi-tenant",
+    "white-label",
+    "embed",
+    "react",
+    "typescript"
+  ],
+  "license": "MIT"
+}
