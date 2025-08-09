@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { FormRenderer } from '../components/FormRenderer';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { getTheme, generateCSSVariables } from '../themes';
 
 // Local type definition (copied from @dynamic-flow/types)
 interface Flow {
@@ -18,6 +19,7 @@ interface Flow {
     webhookUrl?: string;
   };
   theme?: {
+    id?: string;
     customCSS?: string;
     colors?: {
       primary?: string;
@@ -126,26 +128,255 @@ export const PreviewFormView: React.FC = () => {
   // Form preview
   if (!flow) return null;
 
+  // Get the theme for this flow
+  const themeId = flow.theme?.id || 'default';
+  const theme = getTheme(themeId);
+  const themeCSS = generateCSSVariables(theme);
+  
+  // Debug logging for preview
+  console.log('PreviewFormView - Flow theme data:', {
+    flowTheme: flow.theme,
+    themeId,
+    themeName: theme.name,
+    primaryColor: theme.colors.primary.main,
+    generatedCSS: themeCSS.substring(0, 500) + '...',
+    semanticColorsTest: {
+      negativeInCSS: themeCSS.includes('--color-negative-100'),
+      successInCSS: themeCSS.includes('--color-success-100'),
+      warningInCSS: themeCSS.includes('--color-warning-100')
+    }
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Preview Header */}
-      <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
-        <div className="container mx-auto">
+    <div className="min-h-full" style={{ backgroundColor: theme.colors.background.default }}>
+      {/* Apply theme CSS variables */}
+      <style dangerouslySetInnerHTML={{ __html: themeCSS }} />
+      
+      {/* Apply form styling with theme */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .form-container {
+          font-family: var(--font-family);
+          color: var(--color-text-primary);
+        }
+        
+        .form-field {
+          margin-bottom: var(--spacing-lg);
+        }
+        
+        .form-field label {
+          display: block;
+          font-weight: var(--font-weight-medium);
+          font-size: var(--font-size-sm);
+          color: var(--color-text-primary);
+          margin-bottom: var(--spacing-sm);
+        }
+        
+        .form-field input, 
+        .form-field textarea, 
+        .form-field select,
+        .form-field-input {
+          width: 100%;
+          padding: var(--spacing-sm) var(--spacing-md);
+          border: 1px solid var(--color-border-main);
+          border-radius: var(--border-radius-md);
+          background-color: var(--color-background-paper);
+          color: var(--color-text-primary);
+          font-family: var(--font-family);
+          font-size: var(--font-size-base);
+          transition: all 0.2s ease;
+        }
+        
+        .form-field input:focus, 
+        .form-field textarea:focus, 
+        .form-field select:focus,
+        .form-field-input:focus {
+          outline: none;
+          border-color: var(--color-primary);
+        }
+        
+
+        
+        .form-error-message {
+          color: var(--color-negative-100);
+          font-weight: 500;
+        }
+        
+        /* Success States - ใช้ success color */
+        .success-icon-container {
+          background-color: var(--color-success-60);
+        }
+        
+        .success-icon {
+          color: var(--color-success-100);
+        }
+        
+        /* Submit Error - ใช้ negative color */
+        .form-submit-error {
+          background-color: var(--color-negative-60);
+          border: 1px solid var(--color-negative-100);
+          color: var(--color-negative-120);
+        }
+        
+        button[type="submit"], 
+        .btn-primary {
+          background-color: var(--color-primary);
+          color: var(--color-primary-contrast);
+          border: none;
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-family: var(--font-family);
+          font-weight: var(--font-weight-medium);
+          font-size: var(--font-size-base);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: var(--shadow-sm);
+        }
+        
+        button[type="submit"]:hover, 
+        .btn-primary:hover {
+          background-color: var(--color-primary-dark);
+          box-shadow: var(--shadow-md);
+          transform: translateY(-1px);
+        }
+        
+        /* Semantic Button Colors */
+        .btn-secondary {
+          background-color: var(--color-background-paper);
+          color: var(--color-text-primary);
+          border: 1px solid var(--color-border-main);
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-secondary:hover {
+          background-color: var(--color-gray-50);
+          border-color: var(--color-gray-400);
+        }
+        
+        .btn-success {
+          background-color: var(--color-success-100);
+          color: white;
+          border: none;
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+          background-color: var(--color-success-120);
+        }
+        
+        .btn-warning {
+          background-color: var(--color-warning-100);
+          color: var(--color-warning-120);
+          border: none;
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-warning:hover {
+          background-color: var(--color-warning-120);
+          color: white;
+        }
+        
+        .btn-error {
+          background-color: var(--color-negative-100);
+          color: white;
+          border: none;
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-error:hover {
+          background-color: var(--color-negative-120);
+        }
+        
+        .btn-info {
+          background-color: var(--color-information-100);
+          color: white;
+          border: none;
+          padding: var(--spacing-sm) var(--spacing-lg);
+          border-radius: var(--border-radius-md);
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-info:hover {
+          background-color: var(--color-information-120);
+        }
+        
+        .form-step {
+          padding: var(--spacing-xl);
+        }
+        
+        .form-step h2 {
+          color: var(--color-text-primary);
+          font-family: var(--font-family);
+          font-size: var(--font-size-xl);
+          font-weight: var(--font-weight-bold);
+          margin-bottom: var(--spacing-md);
+        }
+        
+        .choice-option {
+          display: flex;
+          align-items: center;
+          padding: var(--spacing-sm) var(--spacing-md);
+          border: 1px solid var(--color-border-main);
+          border-radius: var(--border-radius-md);
+          margin-bottom: var(--spacing-sm);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background-color: var(--color-background-paper);
+        }
+        
+        .choice-option:hover {
+          border-color: var(--color-primary);
+          background-color: var(--color-background-accent);
+        }
+        
+        .choice-option.selected {
+          border-color: var(--color-primary);
+          background-color: var(--color-primary);
+          color: var(--color-primary-contrast);
+        }
+      ` }} />
+      
+      {/* Preview Banner */}
+      <div style={{ backgroundColor: theme.colors.background.accent, borderColor: theme.colors.border.light }} className="border-b">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                <svg className="w-2 h-2 text-yellow-800" fill="currentColor" viewBox="0 0 8 8">
+              <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.colors.primary.main }}>
+                <svg className="w-2 h-2" fill="white" viewBox="0 0 8 8">
                   <circle cx="4" cy="4" r="3"/>
                 </svg>
               </div>
               <div>
-                <h1 className="text-sm font-medium text-yellow-800">Preview Mode</h1>
-                <p className="text-xs text-yellow-600">You are viewing the draft version of "{flow.title}"</p>
+                <h1 className="text-sm font-medium" style={{ color: theme.colors.text.primary }}>Preview Mode</h1>
+                <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                  You are viewing "{flow.title}" with {theme.name} theme
+                </p>
               </div>
             </div>
             <button
               onClick={() => window.history.back()}
-              className="px-3 py-1 text-sm bg-yellow-200 text-yellow-800 rounded-md hover:bg-yellow-300"
+              className="px-3 py-1 text-sm rounded-md hover:opacity-80"
+              style={{ 
+                backgroundColor: theme.colors.primary.main, 
+                color: theme.colors.primary.contrastText 
+              }}
             >
               Exit Preview
             </button>
@@ -154,13 +385,25 @@ export const PreviewFormView: React.FC = () => {
       </div>
 
       {/* Form Content */}
-      <ErrorBoundary>
-        <FormRenderer 
-          flow={flow} 
-          isPreview={true} 
-          onSubmit={handlePreviewSubmit}
-        />
-      </ErrorBoundary>
+      <div className="container mx-auto py-8 form-container">
+        <ErrorBoundary>
+          <FormRenderer 
+            flow={flow} 
+            isPreview={true} 
+            onSubmit={handlePreviewSubmit}
+          />
+          
+          {/* Debug theme information */}
+          <div className="mt-4 p-2 border rounded" style={{ 
+            backgroundColor: theme.colors.background.accent, 
+            borderColor: theme.colors.border.light,
+            color: theme.colors.text.secondary 
+          }}>
+            <strong>Theme Debug:</strong> {flow.theme?.id || 'No theme set'} 
+            {flow.theme?.id && ` (Theme: ${theme.name}, Primary: ${theme.colors.primary.main})`}
+          </div>
+        </ErrorBoundary>
+      </div>
     </div>
   );
 };

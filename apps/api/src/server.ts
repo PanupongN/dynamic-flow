@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import flowRoutes from './routes/flows.js';
 import responseRoutes from './routes/responses.js';
-import { initializeStorage } from './utils/storage.js';
+import { initializeStorage, getAnalytics } from './utils/storage.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +37,17 @@ app.get('/health', (req, res) => {
     version: '1.0.0',
     storage: 'JSON file-based'
   });
+});
+
+// Global analytics endpoint
+app.get('/api/analytics', async (req, res) => {
+  try {
+    const analytics = await getAnalytics(); // Get global analytics (no flowId)
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching global analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch global analytics' });
+  }
 });
 
 // 404 handler

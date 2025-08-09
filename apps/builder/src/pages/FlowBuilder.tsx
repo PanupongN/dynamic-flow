@@ -4,6 +4,9 @@ import { StepBuilder } from '../components/StepBuilder';
 import { FieldBuilder } from '../components/FieldBuilder';
 import { LogicBuilder } from '../components/LogicBuilder';
 import { PreviewPanel } from '../components/PreviewPanel';
+import { ThemeSelector, ColorPaletteDisplay } from '../components/ThemeSelector';
+import { ColorSystemConfig } from '../components/ColorSystemConfig';
+import { createAdvancedTheme, type AdvancedThemeConfig } from '../themes/colorSystem';
 import { useFlowStore } from '../stores/flowStore';
 import { Play, Save, Settings, Eye, X, GitBranch } from 'lucide-react';
 
@@ -48,6 +51,7 @@ export function FlowBuilder() {
   const [showSettings, setShowSettings] = useState(false);
   const [editingFlowName, setEditingFlowName] = useState(false);
   const [tempFlowName, setTempFlowName] = useState('');
+  const [advancedTheme, setAdvancedTheme] = useState<AdvancedThemeConfig | undefined>();
   const lastSavedStepsRef = useRef<string>('');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManualOperationRef = useRef<boolean>(false);
@@ -194,18 +198,12 @@ export function FlowBuilder() {
       console.log('Auto-saving flow (steps changed)...');
       
       try {
-        const { flowsApi } = await import('../services/api');
-        
-        const cleanFlow = {
-          title: currentFlow.title,
-          description: currentFlow.description,
-          nodes: convertStepsToNodes(steps),
-          settings: currentFlow.settings,
-          theme: currentFlow.theme,
-          status: currentFlow.status
+        const updatedFlow = {
+          ...currentFlow,
+          nodes: convertStepsToNodes(steps)
         };
         
-        await flowsApi.update(flowId, cleanFlow);
+        await saveFlow(updatedFlow);
         
         // Update the last saved state only after successful save
         lastSavedStepsRef.current = currentStepsString;
@@ -235,21 +233,12 @@ export function FlowBuilder() {
     isManualOperationRef.current = true;
     
     try {
-      const { flowsApi } = await import('../services/api');
-      
-      const cleanFlow = {
-        title: currentFlow.title,
-        description: currentFlow.description,
-        nodes: convertStepsToNodes(steps),
-        settings: currentFlow.settings,
-        theme: currentFlow.theme,
-        status: currentFlow.status
+      const updatedFlow = {
+        ...currentFlow,
+        nodes: convertStepsToNodes(steps)
       };
       
-      const savedFlow = await flowsApi.update(flowId!, cleanFlow);
-      
-      // Update current flow in store without triggering saves
-      setCurrentFlow(savedFlow);
+      await saveFlow(updatedFlow);
       
       // Update last saved state to prevent unnecessary auto-save
       lastSavedStepsRef.current = JSON.stringify(steps);
@@ -348,22 +337,10 @@ export function FlowBuilder() {
       setIsSaving(true);
       const updatedFlow = { ...currentFlow, title: tempFlowName.trim() };
       
-      // Update via API
-      try {
-        const { flowsApi } = await import('../services/api');
-        await flowsApi.update(flowId!, { title: tempFlowName.trim() });
-      } catch (apiError) {
-        console.warn('API not available, updating locally:', apiError);
-      }
-      
-      // Update store
-      setCurrentFlow(updatedFlow);
+      // Use saveFlow to ensure store and Dashboard are updated
+      await saveFlow(updatedFlow);
       setEditingFlowName(false);
-      
-      // Show success toast
-      if (typeof window !== 'undefined' && (window as any).showToast) {
-        (window as any).showToast('success', 'Flow name updated');
-      }
+      setTempFlowName('');
     } catch (error) {
       console.error('Failed to update flow name:', error);
       if (typeof window !== 'undefined' && (window as any).showToast) {
@@ -377,6 +354,97 @@ export function FlowBuilder() {
   const handleCancelEditingFlowName = () => {
     setEditingFlowName(false);
     setTempFlowName('');
+  };
+
+  // Theme handling functions
+  const handleThemeChange = async (themeId: string) => {
+    if (!currentFlow) return;
+    
+    try {
+      console.log('Changing theme to:', themeId);
+      
+      const updatedFlow = { 
+        ...currentFlow, 
+        theme: { 
+          ...currentFlow.theme,
+          id: themeId
+        } 
+      };
+      
+      console.log('Updated flow theme data:', updatedFlow.theme);
+      
+      // Update locally first
+      setCurrentFlow(updatedFlow);
+      
+      // Save to API immediately to persist theme change
+      try {
+        console.log('Saving theme to API:', updatedFlow.theme);
+        await saveFlow(updatedFlow);
+        console.log('Theme saved to API successfully');
+        
+        // Verify the save
+        const { flowsApi } = await import('../services/api');
+        const savedFlow = await flowsApi.getById(flowId!);
+        console.log('Verified saved theme:', savedFlow.theme);
+      } catch (apiError) {
+        console.warn('Failed to save theme to API:', apiError);
+      }
+      
+    } catch (error) {
+      console.error('Failed to update theme:', error);
+    }
+  };
+
+  // Advanced theme handling
+  const handleAdvancedThemeChange = async (newTheme: AdvancedThemeConfig) => {
+    if (!currentFlow) return;
+    
+    try {
+      console.log('Changing to advanced theme:', newTheme.name);
+      
+      const updatedFlow = { 
+        ...currentFlow, 
+        theme: { 
+          ...currentFlow.theme,
+          id: newTheme.id,
+          advanced: newTheme,
+          colors: {
+            primary: newTheme.colors.primary.baseColor.hex,
+            secondary: newTheme.colors.information.baseColor.hex,
+            warning: newTheme.colors.warning.baseColor.hex,
+            error: newTheme.colors.negative.baseColor.hex,
+            success: newTheme.colors.success.baseColor.hex,
+            background: newTheme.colors.neutral.white.hex,
+            text: newTheme.colors.neutral.gray[900].hex,
+            border: newTheme.colors.neutral.gray[300].hex
+          },
+          typography: {
+            fontFamily: newTheme.typography.fontFamily
+          }
+        } 
+      };
+      
+      // Update locally
+      setCurrentFlow(updatedFlow);
+      setAdvancedTheme(newTheme);
+      
+      // Save to API
+      try {
+        console.log('Saving advanced theme to API:', updatedFlow.theme);
+        await saveFlow(updatedFlow);
+        console.log('Advanced theme saved successfully');
+        
+        // Verify the save
+        const { flowsApi } = await import('../services/api');
+        const savedFlow = await flowsApi.getById(flowId!);
+        console.log('Verified saved advanced theme:', savedFlow.theme);
+      } catch (apiError) {
+        console.warn('Failed to save advanced theme:', apiError);
+      }
+      
+    } catch (error) {
+      console.error('Failed to update advanced theme:', error);
+    }
   };
 
   // Keyboard shortcuts
@@ -582,6 +650,44 @@ export function FlowBuilder() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Basic Theme Settings Section */}
+            <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Basic Themes</h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quick Theme Selection
+                  </label>
+                  <ThemeSelector
+                    selectedThemeId={currentFlow?.theme?.id || 'default'}
+                    onThemeChange={handleThemeChange}
+                  />
+                </div>
+
+                {/* Color Palette Preview */}
+                <div>
+                  <ColorPaletteDisplay themeId={currentFlow?.theme?.id || 'default'} />
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  <p>Quick themes for common use cases. For advanced customization, use the Advanced Color System below.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Color System */}
+            <div className="bg-white rounded-lg mb-4 border border-gray-200">
+              <ColorSystemConfig
+                currentTheme={advancedTheme || createAdvancedTheme(
+                  'default-advanced',
+                  'Default Advanced',
+                  '#8A6E4B'
+                )}
+                onThemeChange={handleAdvancedThemeChange}
+              />
             </div>
           </div>
         </div>

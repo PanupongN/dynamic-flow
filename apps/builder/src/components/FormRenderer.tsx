@@ -361,13 +361,13 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
 
     // Render different input types
     return (
-      <div className="mb-6" key={id}>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="form-field" key={id}>
+        <label>
           {label}
           {isFieldRequired && <span className="text-red-500 ml-1">*</span>}
         </label>
         {description && (
-          <p className="text-sm text-gray-500 mb-2">{description}</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-sm)' }}>{description}</p>
         )}
         <Controller
           {...fieldProps}
@@ -381,12 +381,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       type="text"
                       placeholder={question.placeholder}
                       onKeyDown={handleInputKeyDown}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -399,12 +397,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       type="email"
                       placeholder={question.placeholder}
                       onKeyDown={handleInputKeyDown}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -417,12 +413,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       type="number"
                       placeholder={question.placeholder}
                       onKeyDown={handleInputKeyDown}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -432,7 +426,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                   <div>
                     <div className="space-y-2">
                       {options?.map((option, index) => (
-                        <label key={index} className="flex items-center">
+                        <label key={index} className={`choice-option ${field.value === option.value ? 'selected' : ''}`}>
                           <input
                             type="radio"
                             name={id}
@@ -446,7 +440,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       ))}
                     </div>
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -455,28 +449,31 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                 return (
                   <div>
                     <div className="space-y-2">
-                      {options?.map((option, index) => (
-                        <label key={index} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            value={option.value}
-                            checked={Array.isArray(field.value) ? field.value.includes(option.value) : false}
-                            onChange={(e) => {
-                              const currentValues = Array.isArray(field.value) ? field.value : [];
-                              if (e.target.checked) {
-                                field.onChange([...currentValues, option.value]);
-                              } else {
-                                field.onChange(currentValues.filter(v => v !== option.value));
-                              }
-                            }}
-                            className="mr-2"
-                          />
-                          {option.label}
-                        </label>
-                      ))}
+                      {options?.map((option, index) => {
+                        const isSelected = Array.isArray(field.value) ? field.value.includes(option.value) : false;
+                        return (
+                          <label key={index} className={`choice-option ${isSelected ? 'selected' : ''}`}>
+                            <input
+                              type="checkbox"
+                              value={option.value}
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const currentValues = Array.isArray(field.value) ? field.value : [];
+                                if (e.target.checked) {
+                                  field.onChange([...currentValues, option.value]);
+                                } else {
+                                  field.onChange(currentValues.filter(v => v !== option.value));
+                                }
+                              }}
+                              className="mr-2"
+                            />
+                            {option.label}
+                          </label>
+                        );
+                      })}
                     </div>
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -488,12 +485,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       {...field}
                       type="date"
                       onKeyDown={handleInputKeyDown}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -507,12 +502,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                         const file = e.target.files?.[0];
                         field.onChange(file);
                       }}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -524,12 +517,10 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
                       {...field}
                       placeholder={question.placeholder}
                       rows={4}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        fieldState.error ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="form-field-input"
                     />
                     {fieldState.error && (
-                      <p className="text-red-500 text-sm mt-1">{fieldState.error.message}</p>
+                      <p className="form-error-message text-sm mt-1">{fieldState.error.message}</p>
                     )}
                   </div>
                 );
@@ -595,8 +586,8 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="success-icon-container w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="success-icon w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -620,17 +611,17 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${isPreview ? 'p-4' : 'flex items-center justify-center p-4'}`}>
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+    <div className="form-container" style={{ minHeight: isPreview ? 'auto' : 'calc(100vh - 64px)' }}>
+      <div className="form-step max-w-md w-full mx-auto">
         {/* Progress indicator */}
         <div className="mb-8">
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
+          <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
             <span>Step {currentStepIndex + 1} of {visibleSteps.length}</span>
             <span>{Math.round(((currentStepIndex + 1) / visibleSteps.length) * 100)}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="progress-bar h-2">
             <div 
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className="progress-bar-fill h-2 rounded-full transition-all duration-300"
               style={{ width: `${((currentStepIndex + 1) / visibleSteps.length) * 100}%` }}
             />
           </div>
@@ -639,11 +630,11 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
         {/* Current step */}
         {currentStep && (
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
               {currentStep.node.data.label}
             </h1>
             {currentStep.node.data.description && (
-              <p className="text-gray-600 mb-6">{currentStep.node.data.description}</p>
+              <p className="mb-6" style={{ color: 'var(--color-text-secondary)' }}>{currentStep.node.data.description}</p>
             )}
 
             {/* Render questions */}
@@ -659,7 +650,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
             type="button"
             onClick={handlePrev}
             disabled={navigationHistory.length <= 1}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
@@ -669,7 +660,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
               type="button"
               onClick={handleSubmit(onFormSubmit)}
               disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Submitting...' : 'Submit'}
             </button>
@@ -677,7 +668,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
             <button
               type="button"
               onClick={handleNext}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="btn-primary"
             >
               Next
             </button>
@@ -686,7 +677,7 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
 
         {/* Submit error */}
         {submitError && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="form-submit-error mt-4 p-3 rounded">
             {submitError}
           </div>
         )}

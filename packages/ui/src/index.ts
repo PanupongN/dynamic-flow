@@ -1,6 +1,9 @@
 // Base Components
 export { Button } from './components/Button';
-export { ThemeProvider } from './components/ThemeProvider';
+export { ThemeProvider, useTheme, useThemedStyles, Themed } from './components/ThemeProvider';
+
+// Themes
+export * from './themes';
 
 // Utilities
 export { cn } from './utils/cn';

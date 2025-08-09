@@ -2,6 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix scroll bar issues */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100%;
+}
+
+/* Semantic Colors Override Tailwind */
+@layer components {
+  /* Toast Colors */
+  .toast-success {
+    background-color: var(--color-success-60, #E8F5E8) !important;
+    border: 1px solid var(--color-success-100, #00BD70) !important;
+    color: var(--color-success-120, #1C8A3B) !important;
+  }
+  
+  .toast-error {
+    background-color: var(--color-negative-60, #FDEDEF) !important;
+    border: 1px solid var(--color-negative-100, #EB184E) !important;
+    color: var(--color-negative-120, #BC133E) !important;
+  }
+  
+  .toast-warning {
+    background-color: var(--color-warning-60, #FFF4E6) !important;
+    border: 1px solid var(--color-warning-100, #FFAB2E) !important;
+    color: var(--color-warning-120, #CC8925) !important;
+  }
+  
+  .toast-info {
+    background-color: var(--color-information-60, #EBF4FF) !important;
+    border: 1px solid var(--color-information-100, #3A9FE8) !important;
+    color: var(--color-information-120, #2E7FBA) !important;
+  }
+  
+
+  
+  .form-error-message {
+    color: var(--color-negative-100, #EB184E) !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Success States */
+  .success-icon-container {
+    background-color: var(--color-success-60, #66D7A9) !important;
+  }
+  
+  .success-icon {
+    color: var(--color-success-100, #00BD70) !important;
+  }
+  
+  /* Submit Error */
+  .form-submit-error {
+    background-color: var(--color-negative-60, #F37495) !important;
+    border: 1px solid var(--color-negative-100, #EB184E) !important;
+    color: var(--color-negative-120, #BC133E) !important;
+  }
+  
+  /* Semantic Button Classes */
+  .btn-success {
+    background-color: var(--color-success-100, #00BD70) !important;
+    color: white !important;
+    border: none !important;
+  }
+  
+  .btn-success:hover {
+    background-color: var(--color-success-120, #1C8A3B) !important;
+  }
+  
+  .btn-error {
+    background-color: var(--color-negative-100, #EB184E) !important;
+    color: white !important;
+    border: none !important;
+  }
+  
+  .btn-error:hover {
+    background-color: var(--color-negative-120, #BC133E) !important;
+  }
+  
+  .btn-warning {
+    background-color: var(--color-warning-100, #FFAB2E) !important;
+    color: var(--color-warning-120, #CC8925) !important;
+    border: none !important;
+  }
+  
+  .btn-warning:hover {
+    background-color: var(--color-warning-120, #CC8925) !important;
+    color: white !important;
+  }
+  
+  .btn-info {
+    background-color: var(--color-information-100, #3A9FE8) !important;
+    color: white !important;
+    border: none !important;
+  }
+  
+  .btn-info:hover {
+    background-color: var(--color-information-120, #2E7FBA) !important;
+  }
+  
+  /* Form Container */
+  .form-container {
+    padding: 2rem 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .form-container {
+      padding: 1rem 0.5rem;
+    }
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

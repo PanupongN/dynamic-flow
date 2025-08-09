@@ -50,6 +50,14 @@ router.get('/', async (req, res) => {
     
     let flows = await flowsStorage.read();
     
+    // Ensure flows have required fields (for backward compatibility)
+    flows = flows.map((flow: any) => ({
+      ...flow,
+      title: flow.title || 'Untitled Flow',
+      description: flow.description || '',
+      // Keep draft/published structure intact
+    }));
+    
     // Filter by status
     if (status) {
       flows = flows.filter((flow: any) => flow.status === status);
@@ -59,8 +67,8 @@ router.get('/', async (req, res) => {
     if (search) {
       const searchTerm = search.toString().toLowerCase();
       flows = flows.filter((flow: any) => 
-        flow.title.toLowerCase().includes(searchTerm) ||
-        flow.description?.toLowerCase().includes(searchTerm)
+        (flow.title || '').toLowerCase().includes(searchTerm) ||
+        (flow.description || '').toLowerCase().includes(searchTerm)
       );
     }
     
@@ -110,8 +118,10 @@ router.get('/:id', async (req, res) => {
     
     // Handle both old and new flow structures for backward compatibility
     const responseFlow = flow.draft ? {
-      // New structure: merge draft content at root level
+      // New structure: merge draft content with metadata from root level
       id: flow.id,
+      title: flow.title,
+      description: flow.description,
       status: flow.status,
       createdAt: flow.createdAt,
       updatedAt: flow.updatedAt,
@@ -155,12 +165,14 @@ router.get('/:id/draft', async (req, res) => {
     // Return draft version with metadata
     const draftFlow = {
       id: flow.id,
+      title: flow.title,
+      description: flow.description,
       status: flow.status,
       createdAt: flow.createdAt,
       updatedAt: flow.updatedAt,
       publishedAt: flow.publishedAt,
       version: 'draft',
-      ...(flow.draft || flow)
+      ...(flow.draft || {})
     };
     
     res.json(draftFlow);
@@ -200,6 +212,8 @@ router.get('/:id/published', async (req, res) => {
     // Return published version
     const publishedFlow = {
       id: flow.id,
+      title: flow.title,
+      description: flow.description,
       status: flow.status,
       publishedAt: flow.publishedAt,
       version: 'published',
@@ -234,11 +248,13 @@ router.post('/', async (req, res) => {
     const flowId = uuidv4();
     const timestamp = new Date().toISOString();
     
-    // Extract content (everything except status)
-    const { status, ...content } = cleanValue;
+    // Extract metadata and content
+    const { status, title, description, ...content } = cleanValue;
     
     const flow = {
       id: flowId,
+      title: title || 'Untitled Flow',
+      description: description,
       status: status || 'draft',
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -272,7 +288,7 @@ router.put('/:id', async (req, res) => {
       });
     }
     
-    console.log('Updating flow with payload:', JSON.stringify(req.body, null, 2));
+    console.log('🔵 PUT /flows/:id - Updating flow with payload:', JSON.stringify(req.body, null, 2));
     
     const { error, value } = updateFlowSchema.validate(req.body);
     
@@ -293,15 +309,19 @@ router.put('/:id', async (req, res) => {
     const { id: payloadId, createdAt, ...updateData } = value;
     
     const timestamp = new Date().toISOString();
-    const { status, ...content } = updateData;
+    const { status, title, description, ...content } = updateData;
+    
+    console.log('🔵 PUT /flows/:id - Extracted data:');
+    console.log('  - title:', title);
+    console.log('  - description:', description);
+    console.log('  - status:', status);
+    console.log('  - content:', JSON.stringify(content, null, 2));
     
     // Handle both old and new flow structures
     const existingFlowData = existingFlow as any;
     
     // If it's an old flow structure (no draft/published), migrate it
     const currentDraft = existingFlowData.draft || {
-      title: existingFlowData.title,
-      description: existingFlowData.description,
       nodes: existingFlowData.nodes || [],
       settings: existingFlowData.settings || {},
       theme: existingFlowData.theme || {}
@@ -310,12 +330,14 @@ router.put('/:id', async (req, res) => {
     // Always update draft content when saving
     const updatedFlow = await flowsStorage.update(id, {
       id: existingFlowData.id,
+      title: title !== undefined ? title : existingFlowData.title,
+      description: description !== undefined ? description : existingFlowData.description,
       status: status || existingFlowData.status || 'draft',
       createdAt: existingFlowData.createdAt,
       updatedAt: timestamp,
       publishedAt: existingFlowData.publishedAt || null,
       
-      // Always update draft content
+      // Always update draft content (without title/description)
       draft: { ...currentDraft, ...content },
       
       // Only update published content if status changes to published
@@ -324,7 +346,8 @@ router.put('/:id', async (req, res) => {
         : existingFlowData.published || null
     });
     
-    console.log('Updated flow:', id, (updatedFlow as any)?.title);
+    console.log('🟢 PUT /flows/:id - Updated flow:', id, (updatedFlow as any)?.title);
+    console.log('🟢 PUT /flows/:id - Response:', JSON.stringify(updatedFlow, null, 2));
     
     res.json(updatedFlow);
   } catch (error) {

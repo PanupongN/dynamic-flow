@@ -1,118 +1,192 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeConfig } from '@dynamic-flow/types';
+import { CompanyTheme, getTheme, generateCSSVariables } from '../themes';
 
-interface ThemeContextType {
-  theme: ThemeConfig | null;
-  setTheme: (theme: ThemeConfig) => void;
-  applyTheme: (theme: ThemeConfig) => void;
+interface ThemeContextValue {
+  theme: CompanyTheme;
+  themeId: string;
+  setTheme: (themeId: string) => void;
+  applyTheme: (theme: CompanyTheme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-export function useTheme() {
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: string;
+  customTheme?: CompanyTheme;
+}
+
+export function ThemeProvider({ 
+  children, 
+  defaultTheme = 'default',
+  customTheme 
+}: ThemeProviderProps) {
+  const [themeId, setThemeId] = useState(defaultTheme);
+  const [theme, setTheme] = useState<CompanyTheme>(() => 
+    customTheme || getTheme(defaultTheme)
+  );
+
+  // Apply theme CSS variables to the document
+  useEffect(() => {
+    const styleElement = document.getElementById('dynamic-theme-vars') || 
+      document.createElement('style');
+    
+    if (!styleElement.id) {
+      styleElement.id = 'dynamic-theme-vars';
+      document.head.appendChild(styleElement);
+    }
+
+    styleElement.textContent = generateCSSVariables(theme);
+  }, [theme]);
+
+  const handleSetTheme = (newThemeId: string) => {
+    setThemeId(newThemeId);
+    setTheme(getTheme(newThemeId));
+  };
+
+  const applyTheme = (newTheme: CompanyTheme) => {
+    setTheme(newTheme);
+    setThemeId(newTheme.id);
+  };
+
+  const value: ThemeContextValue = {
+    theme,
+    themeId,
+    setTheme: handleSetTheme,
+    applyTheme
+  };
+
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 }
 
-interface ThemeProviderProps {
+// Theme-aware component wrapper
+interface ThemedProps {
   children: React.ReactNode;
-  defaultTheme?: ThemeConfig;
-  enableWhiteLabel?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const defaultThemeConfig: ThemeConfig = {
-  id: 'default',
-  name: 'Default Theme',
-  colors: {
-    primary: '#3b82f6',
-    secondary: '#64748b',
-    background: '#ffffff',
-    text: '#0f172a',
-    border: '#e2e8f0',
-  },
-  typography: {
-    fontFamily: 'Inter, system-ui, sans-serif',
-    fontSize: {
-      small: '0.875rem',
-      medium: '1rem',
-      large: '1.125rem',
-    },
-  },
-  spacing: {
-    small: '0.5rem',
-    medium: '1rem',
-    large: '1.5rem',
-  },
-  borderRadius: '0.5rem',
-};
-
-export function ThemeProvider({ 
-  children, 
-  defaultTheme = defaultThemeConfig,
-  enableWhiteLabel = false 
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<ThemeConfig>(defaultTheme);
-
-  const applyTheme = (newTheme: ThemeConfig) => {
-    const root = document.documentElement;
-    
-    // Apply CSS custom properties
-    root.style.setProperty('--color-primary', newTheme.colors.primary);
-    root.style.setProperty('--color-secondary', newTheme.colors.secondary);
-    root.style.setProperty('--color-background', newTheme.colors.background);
-    root.style.setProperty('--color-text', newTheme.colors.text);
-    root.style.setProperty('--color-border', newTheme.colors.border);
-    
-    root.style.setProperty('--font-family', newTheme.typography.fontFamily);
-    root.style.setProperty('--font-size-small', newTheme.typography.fontSize.small);
-    root.style.setProperty('--font-size-medium', newTheme.typography.fontSize.medium);
-    root.style.setProperty('--font-size-large', newTheme.typography.fontSize.large);
-    
-    root.style.setProperty('--spacing-small', newTheme.spacing.small);
-    root.style.setProperty('--spacing-medium', newTheme.spacing.medium);
-    root.style.setProperty('--spacing-large', newTheme.spacing.large);
-    
-    root.style.setProperty('--border-radius', newTheme.borderRadius);
-    
-    // Apply custom CSS if provided
-    if (newTheme.customCSS && enableWhiteLabel) {
-      let customStyleElement = document.getElementById('dynamic-flow-custom-styles');
-      if (!customStyleElement) {
-        customStyleElement = document.createElement('style');
-        customStyleElement.id = 'dynamic-flow-custom-styles';
-        document.head.appendChild(customStyleElement);
-      }
-      customStyleElement.textContent = newTheme.customCSS;
-    }
-    
-    setTheme(newTheme);
-  };
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, []);
-
-  const value = {
-    theme,
-    setTheme,
-    applyTheme,
+export function Themed({ children, className = '', style = {} }: ThemedProps) {
+  const { theme } = useTheme();
+  
+  const themedStyle = {
+    fontFamily: theme.typography.fontFamily,
+    backgroundColor: theme.colors.background.default,
+    color: theme.colors.text.primary,
+    ...style
   };
 
   return (
-    <ThemeContext.Provider value={value}>
-      <div 
-        className="min-h-screen transition-colors duration-200"
-        style={{
-          backgroundColor: theme.colors.background,
-          color: theme.colors.text,
-          fontFamily: theme.typography.fontFamily,
-        }}
-      >
-        {children}
-      </div>
-    </ThemeContext.Provider>
+    <div className={className} style={themedStyle}>
+      {children}
+    </div>
   );
+}
+
+// Utility hook for getting theme-aware styles
+export function useThemedStyles() {
+  const { theme } = useTheme();
+
+  return {
+    // Background styles
+    backgroundPrimary: {
+      backgroundColor: theme.colors.primary.main,
+      color: theme.colors.primary.contrastText
+    },
+    backgroundSecondary: {
+      backgroundColor: theme.colors.secondary.main,
+      color: theme.colors.secondary.contrastText
+    },
+    backgroundPaper: {
+      backgroundColor: theme.colors.background.paper,
+      color: theme.colors.text.primary
+    },
+    backgroundAccent: {
+      backgroundColor: theme.colors.background.accent,
+      color: theme.colors.text.primary
+    },
+
+    // Button styles
+    buttonPrimary: {
+      backgroundColor: theme.colors.primary.main,
+      color: theme.colors.primary.contrastText,
+      border: 'none',
+      borderRadius: theme.borderRadius.md,
+      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: theme.typography.fontWeights.medium,
+      fontSize: theme.typography.fontSizes.base,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: theme.shadows.sm
+    },
+    buttonSecondary: {
+      backgroundColor: 'transparent',
+      color: theme.colors.primary.main,
+      border: `1px solid ${theme.colors.primary.main}`,
+      borderRadius: theme.borderRadius.md,
+      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: theme.typography.fontWeights.medium,
+      fontSize: theme.typography.fontSizes.base,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease'
+    },
+
+    // Input styles
+    input: {
+      backgroundColor: theme.colors.background.paper,
+      color: theme.colors.text.primary,
+      border: `1px solid ${theme.colors.border.main}`,
+      borderRadius: theme.borderRadius.md,
+      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+      fontFamily: theme.typography.fontFamily,
+      fontSize: theme.typography.fontSizes.base,
+      transition: 'border-color 0.2s ease',
+      width: '100%'
+    },
+
+    // Text styles
+    heading: {
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: theme.typography.fontWeights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.md
+    },
+    body: {
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: theme.typography.fontWeights.normal,
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.fontSizes.base,
+      lineHeight: '1.6'
+    },
+    caption: {
+      fontFamily: theme.typography.fontFamily,
+      fontWeight: theme.typography.fontWeights.normal,
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.fontSizes.sm
+    },
+
+    // Card styles
+    card: {
+      backgroundColor: theme.colors.background.paper,
+      border: `1px solid ${theme.colors.border.light}`,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      boxShadow: theme.shadows.md,
+      color: theme.colors.text.primary
+    }
+  };
 }

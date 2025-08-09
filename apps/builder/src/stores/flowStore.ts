@@ -28,6 +28,8 @@ interface FlowStore {
   updateFlowSettings: (settings: Partial<SharedFlow>) => void;
   saveFlow: (flow: SharedFlow) => Promise<void>;
   publishFlow: (flowId: string) => Promise<void>;
+  unpublishFlow: (flowId: string) => Promise<void>;
+  deleteFlow: (flowId: string) => Promise<void>;
   loadFlows: () => Promise<void>;
   createNewFlow: (title?: string) => Promise<SharedFlow>;
 }
@@ -159,7 +161,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       requireAuth: false,
       collectAnalytics: true,
     },
-    theme: defaultTheme,
+    theme: { id: 'default', ...defaultTheme },
     createdAt: new Date(),
     updatedAt: new Date(),
     status: 'draft',
@@ -245,13 +247,19 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         status: flow.status
       };
       
+      console.log('saveFlow: Sending to API:', JSON.stringify(cleanFlow, null, 2));
+      
       if (existingIndex >= 0) {
         // Update existing flow
+        console.log('saveFlow: Updating existing flow', flow.id);
         savedFlow = await flowsApi.update(flow.id, cleanFlow);
+        console.log('saveFlow: API response:', JSON.stringify(savedFlow, null, 2));
         flows[existingIndex] = savedFlow;
       } else {
         // Create new flow
+        console.log('saveFlow: Creating new flow');
         savedFlow = await flowsApi.create(cleanFlow);
+        console.log('saveFlow: API response:', JSON.stringify(savedFlow, null, 2));
         flows.push(savedFlow);
       }
       
@@ -300,6 +308,61 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
   },
 
+  unpublishFlow: async (flowId) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      console.log('Unpublishing flow:', flowId);
+      
+      const { flowsApi } = await import('../services/api');
+      const unpublishedFlow = await flowsApi.unpublish(flowId);
+      
+      const { currentFlow, flows } = get();
+      const flowIndex = flows.findIndex(f => f.id === flowId);
+      
+      if (flowIndex >= 0) {
+        flows[flowIndex] = unpublishedFlow;
+      }
+      
+      if (currentFlow && currentFlow.id === flowId) {
+        set({ currentFlow: unpublishedFlow });
+      }
+      
+      set({ flows: [...flows], isLoading: false });
+      console.log('Flow unpublished successfully!');
+    } catch (error) {
+      console.error('Unpublish flow error:', error);
+      set({ error: 'Failed to unpublish flow', isLoading: false });
+    }
+  },
+
+  deleteFlow: async (flowId) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      console.log('Deleting flow:', flowId);
+      
+      const { flowsApi } = await import('../services/api');
+      await flowsApi.delete(flowId);
+      
+      const { currentFlow, flows } = get();
+      const updatedFlows = flows.filter(flow => flow.id !== flowId);
+      
+      set({ flows: updatedFlows });
+      
+      // Clear current flow if it's the one being deleted
+      if (currentFlow && currentFlow.id === flowId) {
+        set({ currentFlow: null });
+      }
+      
+      set({ isLoading: false });
+      console.log('Flow deleted successfully!');
+    } catch (error) {
+      console.error('Delete flow error:', error);
+      set({ error: 'Failed to delete flow', isLoading: false });
+    }
+  },
+
   loadFlows: async () => {
     set({ isLoading: true, error: null });
     
@@ -328,7 +391,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
             requireAuth: false,
             collectAnalytics: true,
           },
-          theme: defaultTheme,
+          theme: { id: 'default', ...defaultTheme },
           createdAt: new Date(),
           updatedAt: new Date(),
           status: 'draft',
@@ -352,7 +415,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
           requireAuth: false,
           collectAnalytics: true,
         },
-        theme: defaultTheme,
+        theme: { id: 'default', ...defaultTheme },
         status: 'draft',
       };
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 interface ToastProps {
   id: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'warning';
   title: string;
   message?: string;
   duration?: number;
@@ -33,22 +33,26 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="toast-icon-success w-5 h-5" style={{ color: 'var(--color-success-100)' }} />;
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <AlertCircle className="toast-icon-error w-5 h-5" style={{ color: 'var(--color-negative-100)' }} />;
+      case 'warning':
+        return <AlertTriangle className="toast-icon-warning w-5 h-5" style={{ color: 'var(--color-warning-100)' }} />;
       case 'info':
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="toast-icon-info w-5 h-5" style={{ color: 'var(--color-information-100)' }} />;
     }
   };
 
   const getBackgroundColor = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200';
+        return 'toast-success';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'toast-error';
+      case 'warning':
+        return 'toast-warning';
       case 'info':
-        return 'bg-blue-50 border-blue-200';
+        return 'toast-info';
     }
   };
 
@@ -87,7 +91,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
 interface ToastContainerProps {
   toasts: Array<{
     id: string;
-    type: 'success' | 'error' | 'info';
+    type: 'success' | 'error' | 'info' | 'warning';
     title: string;
     message?: string;
     duration?: number;

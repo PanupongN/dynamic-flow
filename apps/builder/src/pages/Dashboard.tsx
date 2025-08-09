@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Eye, Share, Loader, Copy, ExternalLink, Trash2 } from 'lucide-react';
 import { useFlowStore } from '../stores/flowStore';
 import { AnalyticsDashboard } from '../components/AnalyticsCard';
 import { QuickStartModal } from '../components/QuickStartModal';
@@ -16,12 +16,25 @@ export function Dashboard() {
     error, 
     loadFlows, 
     createNewFlow,
-    publishFlow 
+    publishFlow,
+    unpublishFlow,
+    deleteFlow
   } = useFlowStore();
 
   useEffect(() => {
     loadFlows();
   }, [loadFlows]);
+
+  // Debug logging
+  useEffect(() => {
+    if (flows && flows.length > 0) {
+      console.log('Dashboard flows data:', flows.map(f => ({ 
+        id: f.id, 
+        title: f.title, 
+        hasTitle: !!f.title 
+      })));
+    }
+  }, [flows]);
 
   const handleCreateFlow = async (template?: any, flowName?: string) => {
     try {
@@ -70,6 +83,32 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to publish flow:', error);
       toast.error('Failed to publish flow');
+    }
+  };
+
+  const handleUnpublishFlow = async (flowId: string) => {
+    try {
+      await unpublishFlow(flowId);
+      toast.success('Flow unpublished successfully');
+    } catch (error) {
+      console.error('Failed to unpublish flow:', error);
+      toast.error('Failed to unpublish flow');
+    }
+  };
+
+  const handleDeleteFlow = async (flowId: string, flowTitle: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${flowTitle}"?\n\nThis action cannot be undone.`
+    );
+    
+    if (confirmed) {
+      try {
+        await deleteFlow(flowId);
+        toast.success('Flow deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete flow:', error);
+        toast.error('Failed to delete flow');
+      }
     }
   };
 
@@ -179,7 +218,7 @@ export function Dashboard() {
               <div key={flow.id} className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900">{flow.title}</h3>
+                    <h3 className="text-lg font-medium text-gray-900">{flow.title || 'Untitled Flow'}</h3>
                     <p className="text-gray-500 text-sm mt-1">{flow.description || 'No description'}</p>
                     <div className="flex items-center space-x-4 mt-2">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -259,16 +298,33 @@ export function Dashboard() {
                         <ExternalLink className="w-4 h-4" />
                       </Link>
                     )}
+                    
+                    {/* Publish/Unpublish Button */}
+                    {flow.status === 'published' ? (
+                      <button 
+                        onClick={() => handleUnpublishFlow(flow.id)}
+                        className="p-2 rounded text-red-400 hover:text-red-600 hover:bg-red-100"
+                        title="Unpublish"
+                      >
+                        <Share className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handlePublishFlow(flow.id)}
+                        className="p-2 rounded text-blue-400 hover:text-blue-600 hover:bg-blue-100"
+                        title="Publish Draft"
+                      >
+                        <Share className="w-4 h-4" />
+                      </button>
+                    )}
+                    
+                    {/* Delete Button */}
                     <button 
-                      onClick={() => handlePublishFlow(flow.id)}
-                      className={`p-2 rounded ${
-                        flow.status === 'published'
-                          ? 'text-red-400 hover:text-red-600 hover:bg-red-100'
-                          : 'text-blue-400 hover:text-blue-600 hover:bg-blue-100'
-                      }`}
-                      title={flow.status === 'published' ? 'Unpublish' : 'Publish Draft'}
+                      onClick={() => handleDeleteFlow(flow.id, flow.title)}
+                      className="p-2 rounded text-red-400 hover:text-red-600 hover:bg-red-100"
+                      title="Delete Flow"
                     >
-                      <Share className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
