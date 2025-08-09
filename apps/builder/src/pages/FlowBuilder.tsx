@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StepBuilder } from '../components/StepBuilder';
 import { FieldBuilder } from '../components/FieldBuilder';
@@ -52,17 +52,13 @@ export function FlowBuilder() {
   const [editingFlowName, setEditingFlowName] = useState(false);
   const [tempFlowName, setTempFlowName] = useState('');
   const [advancedTheme, setAdvancedTheme] = useState<AdvancedThemeConfig | undefined>();
-  const lastSavedStepsRef = useRef<string>('');
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isManualOperationRef = useRef<boolean>(false);
   
   const { 
     currentFlow, 
     isLoading,
     error,
     setCurrentFlow,
-    saveFlow,
-    publishFlow
+    saveFlow
   } = useFlowStore();
 
   // Convert flow nodes to steps
@@ -146,18 +142,11 @@ export function FlowBuilder() {
           const { flowsApi } = await import('../services/api');
           const flow = await flowsApi.getById(flowId);
           
-          console.log('🔄 FlowBuilder.loadFlow - Loaded flow:', flow);
-          console.log('🔄 FlowBuilder.loadFlow - Flow theme:', flow.theme);
-          console.log('🔄 FlowBuilder.loadFlow - Flow theme.id:', flow.theme?.id);
-          
           setCurrentFlow(flow);
           
           // Convert flow nodes to steps
           const convertedSteps = convertNodesToSteps(flow.nodes || []);
           setSteps(convertedSteps);
-          
-          // Initialize the last saved state
-          lastSavedStepsRef.current = JSON.stringify(convertedSteps);
           
           // Select first step if available
           if (convertedSteps.length > 0) {
@@ -176,69 +165,12 @@ export function FlowBuilder() {
     loadFlow();
   }, [flowId, setCurrentFlow, navigate]);
 
-  // Auto-save when steps change (only if actually changed)
-  useEffect(() => {
-    if (!currentFlow || !flowId || steps.length === 0) return;
-    
-    // Skip auto-save during manual operations
-    if (isManualOperationRef.current) {
-      return;
-    }
-
-    // Convert steps to JSON string for comparison
-    const currentStepsString = JSON.stringify(steps);
-    
-    // Only auto-save if steps actually changed
-    if (currentStepsString === lastSavedStepsRef.current) {
-      return;
-    }
-
-    // Clear previous timeout
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-
-    // Set new timeout
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      console.log('🔄 Auto-saving flow (steps changed)...');
-      console.log('🔄 Auto-save - currentFlow.theme before save:', currentFlow?.theme);
-      
-      try {
-        const updatedFlow = {
-          ...currentFlow,
-          nodes: convertStepsToNodes(steps)
-        };
-        
-        console.log('🔄 Auto-save - updatedFlow.theme:', updatedFlow.theme);
-        await saveFlow(updatedFlow);
-        
-        // Update the last saved state only after successful save
-        lastSavedStepsRef.current = currentStepsString;
-        console.log('Auto-save completed');
-        
-        // Show success toast if available
-        if (typeof window !== 'undefined' && (window as any).showToast) {
-          (window as any).showToast('success', 'Changes saved automatically');
-        }
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-      }
-    }, 2000);
-
-    // Cleanup function
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [steps, currentFlow?.title, currentFlow?.description, currentFlow?.settings, currentFlow?.status, flowId]);
-  // Note: currentFlow?.theme intentionally excluded to prevent race condition with theme changes
+  // Auto-save removed - users will manually save changes via "Save Draft" button
 
   const handleSave = async () => {
     if (!currentFlow) return;
     
     setIsSaving(true);
-    isManualOperationRef.current = true;
     
     try {
       const updatedFlow = {
@@ -247,17 +179,6 @@ export function FlowBuilder() {
       };
       
       await saveFlow(updatedFlow);
-      
-      // Update last saved state to prevent unnecessary auto-save
-      lastSavedStepsRef.current = JSON.stringify(steps);
-      
-      // Clear any pending auto-save
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
-      
-      console.log('Manual save completed');
       
       // Show success toast
       if (typeof window !== 'undefined' && (window as any).showToast) {
@@ -272,7 +193,6 @@ export function FlowBuilder() {
       }
     } finally {
       setIsSaving(false);
-      isManualOperationRef.current = false;
     }
   };
 
@@ -295,17 +215,10 @@ export function FlowBuilder() {
       await flowsApi.update(flowId!, cleanFlow);
       
       // Then publish
-      console.log('🚀 Publishing flow...');
       const publishedFlow = await flowsApi.publish(flowId!);
-      console.log('🚀 Published flow received - theme:', publishedFlow.theme);
       
       // Update current flow
       setCurrentFlow(publishedFlow);
-      
-      // Update last saved state
-      lastSavedStepsRef.current = JSON.stringify(steps);
-      
-      console.log('Flow published successfully');
       
       // Show success toast
       if (typeof window !== 'undefined' && (window as any).showToast) {
@@ -371,8 +284,6 @@ export function FlowBuilder() {
     if (!currentFlow) return;
     
     try {
-      console.log('🎨 FlowBuilder.handleThemeChange - Changing theme to:', themeId);
-      
       // Ensure theme object structure is correct
       const updatedFlow = { 
         ...currentFlow, 
@@ -382,33 +293,25 @@ export function FlowBuilder() {
         } 
       };
       
-      console.log('🎨 FlowBuilder.handleThemeChange - Updated flow theme data:', updatedFlow.theme);
-      console.log('🎨 FlowBuilder.handleThemeChange - Theme id after update:', updatedFlow.theme.id);
-      
       // Update locally first
-      console.log('🎨 FlowBuilder.handleThemeChange - Setting currentFlow locally with theme:', updatedFlow.theme);
       setCurrentFlow(updatedFlow);
       
       // Save to API immediately to persist theme change
       try {
-        console.log('🎨 FlowBuilder.handleThemeChange - Saving theme to API:', updatedFlow.theme);
         await saveFlow(updatedFlow);
-        console.log('🎨 FlowBuilder.handleThemeChange - Theme saved to API successfully');
         
         // Verify the save by refetching the flow
         const { flowsApi } = await import('../services/api');
         const savedFlow = await flowsApi.getById(flowId!);
-        console.log('🎨 FlowBuilder.handleThemeChange - Verified saved flow theme:', savedFlow.theme);
-        console.log('🎨 FlowBuilder.handleThemeChange - Verified saved flow theme.id:', savedFlow.theme?.id);
         
         // Update currentFlow with the verified data
         setCurrentFlow(savedFlow);
       } catch (apiError) {
-        console.warn('🎨 FlowBuilder.handleThemeChange - Failed to save theme to API:', apiError);
+        console.warn('Failed to save theme to API:', apiError);
       }
       
     } catch (error) {
-      console.error('🎨 FlowBuilder.handleThemeChange - Failed to update theme:', error);
+      console.error('Failed to update theme:', error);
     }
   };
 
@@ -417,8 +320,6 @@ export function FlowBuilder() {
     if (!currentFlow) return;
     
     try {
-      console.log('Changing to advanced theme:', newTheme.name);
-      
       const updatedFlow = { 
         ...currentFlow, 
         theme: { 
@@ -448,7 +349,6 @@ export function FlowBuilder() {
       // Save to API
       try {
         await saveFlow(updatedFlow);
-        console.log('Advanced theme saved successfully');
       } catch (apiError) {
         console.warn('Failed to save advanced theme:', apiError);
       }
@@ -676,20 +576,12 @@ export function FlowBuilder() {
                     selectedThemeId={currentFlow?.theme?.id || 'default'}
                     onThemeChange={handleThemeChange}
                   />
-                  <div className="text-xs text-gray-500 mt-1 space-y-1">
-                    <div>Debug: currentFlow.theme = {JSON.stringify(currentFlow?.theme)}</div>
-                    <div>Debug: selectedThemeId = {currentFlow?.theme?.id || 'default'}</div>
-                    <div>Debug: theme object keys = {currentFlow?.theme ? Object.keys(currentFlow.theme).join(', ') : 'none'}</div>
-                    <div>Debug: typeof theme.id = {typeof currentFlow?.theme?.id}, value = '{currentFlow?.theme?.id}'</div>
-                  </div>
+
                 </div>
 
                 {/* Color Palette Preview */}
                 <div>
                   <ColorPaletteDisplay themeId={currentFlow?.theme?.id || 'default'} />
-                  <div className="text-xs text-gray-500 mt-1">
-                    Debug: ColorPaletteDisplay themeId = {currentFlow?.theme?.id || 'default'}
-                  </div>
                 </div>
 
                 <div className="text-xs text-gray-500">

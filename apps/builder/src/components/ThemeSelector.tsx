@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Palette, Check, Eye } from 'lucide-react';
+import { Palette, Check } from 'lucide-react';
 import { getAllThemes, CompanyTheme } from '../themes';
 
 interface ThemeSelectorProps {
@@ -21,10 +21,7 @@ export function ThemeSelector({ selectedThemeId, onThemeChange, className = '' }
   
   const selectedTheme = themes.find(t => t.id === actualThemeId) || themes[0];
 
-  console.log('🎨 ThemeSelector - selectedThemeId:', selectedThemeId);
-  console.log('🎨 ThemeSelector - actualThemeId:', actualThemeId);
-  console.log('🎨 ThemeSelector - selectedTheme:', selectedTheme);
-  console.log('🎨 ThemeSelector - available themes:', themes.map(t => t.id));
+
 
   const handleThemeSelect = (themeId: string) => {
     onThemeChange(themeId);
@@ -194,13 +191,11 @@ export function ColorPaletteDisplay({ themeId }: { themeId: string }) {
   const themes = getAllThemes();
   const theme = themes.find(t => t.id === themeId) || themes[0];
 
-  console.log('🎨 ColorPaletteDisplay - themeId:', themeId);
-  console.log('🎨 ColorPaletteDisplay - found theme:', theme);
+
 
   return (
     <div className="p-4 bg-white border border-gray-200 rounded-lg">
       <h3 className="font-medium text-gray-900 mb-3">Color Palette - {theme.name}</h3>
-      <div className="text-xs text-gray-500 mb-2">Theme ID: {themeId}</div>
       
       <div className="space-y-3">
         {/* Primary Colors */}

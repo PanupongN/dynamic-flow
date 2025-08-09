@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { Flow as SharedFlow } from '@dynamic-flow/types';
-import { devtools } from 'zustand/middleware';
 
 interface FlowNode {
   id: string;
@@ -229,8 +228,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Saving flow:', flow);
-      
       const { flowsApi } = await import('../services/api');
       
       let savedFlow;
@@ -247,13 +244,9 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         status: flow.status
       };
       
-      console.log('🏪 FlowStore.saveFlow - Payload theme:', cleanFlow.theme);
-      
       if (existingIndex >= 0) {
         // Update existing flow
-        console.log('🏪 FlowStore.saveFlow - Updating existing flow');
         savedFlow = await flowsApi.update(flow.id, cleanFlow);
-        console.log('🏪 FlowStore.saveFlow - API response theme:', savedFlow.theme);
         flows[existingIndex] = savedFlow;
       } else {
         // Create new flow
@@ -261,16 +254,11 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         flows.push(savedFlow);
       }
       
-      console.log('🏪 FlowStore - Setting currentFlow with theme:', savedFlow.theme);
-      console.log('🏪 FlowStore - Setting currentFlow with theme.id:', savedFlow.theme?.id);
-      console.log('🏪 FlowStore - Full savedFlow object:', savedFlow);
-      
       set({ 
         flows: [...flows], 
         currentFlow: savedFlow,
         isLoading: false 
       });
-      console.log('Flow saved successfully!');
       
       // Show success toast if available
       if (typeof window !== 'undefined' && (window as any).showToast) {
@@ -286,11 +274,8 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Publishing flow:', flowId);
-      
       const { flowsApi } = await import('../services/api');
       const publishedFlow = await flowsApi.publish(flowId);
-      console.log('🚀 FlowStore.publishFlow - Published flow theme:', publishedFlow.theme);
       
       const { currentFlow, flows } = get();
       const flowIndex = flows.findIndex(f => f.id === flowId);
@@ -300,12 +285,10 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       }
       
       if (currentFlow && currentFlow.id === flowId) {
-        console.log('🚀 FlowStore.publishFlow - Setting currentFlow theme:', publishedFlow.theme);
         set({ currentFlow: publishedFlow });
       }
       
       set({ flows: [...flows], isLoading: false });
-      console.log('Flow published successfully!');
     } catch (error) {
       console.error('Publish flow error:', error);
       set({ error: 'Failed to publish flow', isLoading: false });
@@ -316,8 +299,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Unpublishing flow:', flowId);
-      
       const { flowsApi } = await import('../services/api');
       const unpublishedFlow = await flowsApi.unpublish(flowId);
       
@@ -333,7 +314,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       }
       
       set({ flows: [...flows], isLoading: false });
-      console.log('Flow unpublished successfully!');
     } catch (error) {
       console.error('Unpublish flow error:', error);
       set({ error: 'Failed to unpublish flow', isLoading: false });
@@ -344,8 +324,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Deleting flow:', flowId);
-      
       const { flowsApi } = await import('../services/api');
       await flowsApi.delete(flowId);
       
@@ -360,7 +338,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       }
       
       set({ isLoading: false });
-      console.log('Flow deleted successfully!');
     } catch (error) {
       console.error('Delete flow error:', error);
       set({ error: 'Failed to delete flow', isLoading: false });
@@ -371,18 +348,14 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Loading flows...');
-      
       const { flowsApi } = await import('../services/api');
       const { flows } = await flowsApi.getAll();
       
       set({ flows, isLoading: false });
-      console.log(`Loaded ${flows.length} flows`);
     } catch (error) {
       console.error('Load flows error:', error);
       
       // Fallback to demo data if API is not available
-      console.log('API not available, using demo data');
       const mockFlows: Flow[] = [
         {
           id: 'flow_1',
@@ -446,7 +419,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
           isLoading: false 
         });
         
-        console.log('New flow created successfully:', savedFlow.id);
+
         return savedFlow;
       } catch (apiError) {
         console.warn('API not available, creating local flow:', apiError);

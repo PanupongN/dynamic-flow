@@ -144,12 +144,8 @@ router.get('/:id', async (req, res) => {
     }
     
     // Handle both old and new flow structures for backward compatibility
-    console.log('🔍 API GET flow - draft.theme:', flow.draft?.theme);
-    console.log('🔍 API GET flow - theme keys:', flow.draft?.theme ? Object.keys(flow.draft.theme) : 'none');
-    
     const responseFlow = transformFlowResponse(flow);
     
-    console.log('🔍 API GET flow - responseFlow.theme:', responseFlow.theme);
     res.json(responseFlow);
   } catch (error) {
     console.error('Error fetching flow:', error);
@@ -243,8 +239,6 @@ router.get('/:id/published', async (req, res) => {
 // POST /api/flows - Create new flow
 router.post('/', async (req, res) => {
   try {
-    console.log('Creating flow with payload:', JSON.stringify(req.body, null, 2));
-    
     const { error, value } = createFlowSchema.validate(req.body);
     
     if (error) {
@@ -277,8 +271,6 @@ router.post('/', async (req, res) => {
       // Store published content (only when published)
       published: status === 'published' ? content : null
     };
-    
-    console.log('Creating flow:', flow.id, flow.title);
     
     const savedFlow = await flowsStorage.create(flow);
     res.status(201).json(savedFlow);
@@ -322,8 +314,6 @@ router.put('/:id', async (req, res) => {
     const timestamp = new Date().toISOString();
     const { status, title, description, ...content } = updateData;
     
-    console.log('🔵 API PUT /flows/:id - Content theme:', content.theme);
-    
     // Handle both old and new flow structures
     const existingFlowData = existingFlow as any;
     
@@ -353,18 +343,12 @@ router.put('/:id', async (req, res) => {
         : existingFlowData.published || null
     };
     
-    console.log('🔵 API PUT /flows/:id - Final draft theme:', updatePayload.draft.theme);
-    
     // Always update draft content when saving
     const updatedFlow = await flowsStorage.update(id, updatePayload);
-    
-    console.log('🟢 API PUT /flows/:id - Saved draft theme:', (updatedFlow as any)?.draft?.theme);
-    console.log('Updated flow:', id, (updatedFlow as any)?.title);
     
     // Transform response to match GET endpoint format (for consistency)
     const responseFlow = transformFlowResponse(updatedFlow);
     
-    console.log('🟢 API PUT /flows/:id - Response theme:', responseFlow.theme);
     res.json(responseFlow);
   } catch (error) {
     console.error('Error updating flow:', error);
@@ -391,7 +375,6 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Flow not found' });
     }
     
-    console.log('Deleted flow:', id);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting flow:', error);
@@ -409,8 +392,6 @@ router.post('/:id/publish', async (req, res) => {
       return res.status(404).json({ error: 'Flow not found' });
     }
     
-    console.log('🚀 Publishing flow - Draft theme:', (flow as any).draft?.theme);
-    
     const timestamp = new Date().toISOString();
     
     const updatedFlow = await flowsStorage.update(id, {
@@ -422,12 +403,9 @@ router.post('/:id/publish', async (req, res) => {
       published: (flow as any).draft
     });
     
-    console.log('🚀 Published flow - Published theme:', (updatedFlow as any).published?.theme);
-    
     // Transform response to match GET endpoint format (for consistency)
     const responseFlow = transformFlowResponse(updatedFlow);
     
-    console.log('🚀 API POST /flows/:id/publish - Response theme:', responseFlow.theme);
     res.json(responseFlow);
   } catch (error) {
     console.error('Error publishing flow:', error);
