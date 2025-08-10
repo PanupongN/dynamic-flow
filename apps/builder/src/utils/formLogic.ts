@@ -88,6 +88,16 @@ export interface Flow {
   updatedAt?: string;
   publishedAt?: string;
   version?: string;
+  draftContent?: {
+    nodes: FlowNode[];
+    settings?: any;
+    theme?: any;
+  };
+  publishedContent?: {
+    nodes: FlowNode[];
+    settings?: any;
+    theme?: any;
+  };
 }
 
 /**

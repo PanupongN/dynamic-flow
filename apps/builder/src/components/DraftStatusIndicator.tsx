@@ -164,6 +164,7 @@ export function DraftDetailButton({ flowId, publishedFlow, size = 'medium' }: Dr
   const [isLoading, setIsLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
+  const [publishedFlowData, setPublishedFlowData] = useState<any>(publishedFlow);
 
   const loadDetailedDiff = async () => {
     if (diffResult) {
@@ -175,14 +176,26 @@ export function DraftDetailButton({ flowId, publishedFlow, size = 'medium' }: Dr
     try {
       // โหลดข้อมูลแบบละเอียดจาก API
       const { flowsApi } = await import('../services/api');
-      const detailedFlow = await flowsApi.getById(flowId);
+      const detailedFlow = await flowsApi.getDraft(flowId);
+      
+      // If we don't have published flow data, try to load it
+      let publishedData = publishedFlowData;
+      if (!publishedData) {
+        try {
+          publishedData = await flowsApi.getPublished(flowId);
+        } catch (err) {
+          console.log('No published version found for comparison');
+          publishedData = null;
+        }
+      }
       
       const result = compareFlowVersions(
         detailedFlow,
-        publishedFlow || null // ใช้ publishedFlow แทน (detailedFlow as any).versions?.published
+        publishedData
       );
       
       setDiffResult(result);
+      setPublishedFlowData(publishedData);
       setShowDetails(true);
     } catch (error) {
       console.error('Failed to load detailed diff:', error);

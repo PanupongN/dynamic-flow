@@ -15,6 +15,16 @@ export interface Flow {
   created_by?: string;
   version: number;
   hasUnpublishedChanges?: boolean;
+  draftContent?: {
+    nodes: any[];
+    settings: any;
+    theme: any;
+  };
+  publishedContent?: {
+    nodes: any[];
+    settings: any;
+    theme: any;
+  };
 }
 
 export interface FlowDraft {
@@ -97,6 +107,19 @@ export class FlowRepository {
         theme = {};
       }
 
+      // Parse draft and published content for comparison
+      const draftContent = {
+        nodes: this.safeParseJson(dbFlow.draft_nodes, []),
+        settings: this.safeParseJson(dbFlow.draft_settings, {}),
+        theme: this.safeParseJson(dbFlow.draft_theme, {})
+      };
+
+      const publishedContent = {
+        nodes: this.safeParseJson(dbFlow.published_nodes, []),
+        settings: this.safeParseJson(dbFlow.published_settings, {}),
+        theme: this.safeParseJson(dbFlow.published_theme, {})
+      };
+
       return {
         id: dbFlow.id,
         title: dbFlow.title || '',
@@ -110,7 +133,10 @@ export class FlowRepository {
         published_at: dbFlow.published_at || undefined,
         created_by: dbFlow.created_by || undefined,
         version: dbFlow.version || 1,
-        hasUnpublishedChanges: hasUnpublishedChanges
+        hasUnpublishedChanges: hasUnpublishedChanges,
+        // Add draft and published content for comparison
+        draftContent,
+        publishedContent
       };
     });
   }

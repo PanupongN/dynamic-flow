@@ -12,6 +12,16 @@ interface Flow {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+  draftContent?: {
+    nodes: any[];
+    settings: any;
+    theme: any;
+  };
+  publishedContent?: {
+    nodes: any[];
+    settings: any;
+    theme: any;
+  };
 }
 
 interface FormResponse {

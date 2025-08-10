@@ -95,6 +95,16 @@ export interface Flow {
   updatedAt: Date;
   publishedAt?: Date;
   status: 'draft' | 'published' | 'archived';
+  draftContent?: {
+    nodes: FlowNode[];
+    settings: FlowSettings;
+    theme: ThemeConfig;
+  };
+  publishedContent?: {
+    nodes: FlowNode[];
+    settings: FlowSettings;
+    theme: ThemeConfig;
+  };
 }
 
 export interface FlowSettings {

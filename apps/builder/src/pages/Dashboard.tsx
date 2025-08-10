@@ -203,7 +203,7 @@ export function Dashboard() {
                       }`}>
                         {flow.status === 'draft' ? 'Draft' : flow.status}
                       </span>
-                      <DraftStatusBadge currentFlow={flow} size="small" />
+                      <DraftStatusBadge currentFlow={flow} publishedFlow={flow.publishedContent} size="small" />
                       <span className="text-sm text-gray-500">{getResponseCount(flow.id)} responses</span>
                       <span className="text-sm text-gray-500">Created {formatDate(flow.createdAt)}</span>
                       {flow.updatedAt && flow.updatedAt !== flow.createdAt && (
@@ -244,7 +244,11 @@ export function Dashboard() {
                     {/* Draft Changes Detail */}
                     {flow.status === 'published' && (
                       <div className="mt-3">
-                        <DraftDetailButton flowId={flow.id} size="small" />
+                        <DraftDetailButton 
+                          flowId={flow.id} 
+                          publishedFlow={flow.publishedContent}
+                          size="small" 
+                        />
                       </div>
                     )}
                   </div>
