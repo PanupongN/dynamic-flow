@@ -7,7 +7,7 @@ import { Settings } from './pages/Settings';
 import { Navbar } from './components/Navbar';
 import { ToastContainer } from './components/Toast';
 import { useToast } from './hooks/useToast';
-
+import { AuthGuard } from './components/Auth/AuthGuard';
 
 function App() {
   const { toasts, removeToast } = useToast();
@@ -17,15 +17,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isPublicForm && <Navbar />}
-      <main className={isPublicForm ? '' : 'container mx-auto px-4 py-8'}>
-                    <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/builder/:flowId?" element={<FlowBuilder />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-      </main>
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <AuthGuard>
+        {!isPublicForm && <Navbar />}
+        <main className={isPublicForm ? '' : 'container mx-auto px-4 py-8'}>
+                      <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/builder/:flowId?" element={<FlowBuilder />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+        </main>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+      </AuthGuard>
     </div>
   );
 }

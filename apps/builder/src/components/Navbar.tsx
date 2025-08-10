@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFlowStore } from '../stores/flowStore';
+import { useAuth } from '../contexts/AuthContext';
+import LoginButton from './Auth/LoginButton';
+import LogoutButton from './Auth/LogoutButton';
 
 export function Navbar() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const { createNewFlow, isLoading } = useFlowStore();
+  const { currentUser } = useAuth();
 
   const handleCreateFlow = async () => {
     try {
@@ -78,19 +82,24 @@ export function Navbar() {
               </span>
             </div>
 
-            <button 
-              onClick={handleCreateFlow}
-              disabled={isLoading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isLoading ? 'Creating...' : 'Create Flow'}
-            </button>
+            {currentUser ? (
+              <>
+                <button 
+                  onClick={handleCreateFlow}
+                  disabled={isLoading}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Creating...' : 'Create Flow'}
+                </button>
+                <LogoutButton />
+              </>
+            ) : (
+              <LoginButton />
+            )}
           </div>
         </div>
       </div>
     </nav>
-
-
-  </>
+    </>
   );
 }
