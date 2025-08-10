@@ -235,13 +235,14 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const existingIndex = flows.findIndex(f => f.id === flow.id);
       
       // Clean payload - remove system fields for API
+      // Don't send status to preserve existing status (especially for published flows)
       const cleanFlow = {
         title: flow.title,
         description: flow.description,
         nodes: flow.nodes,
         settings: flow.settings,
-        theme: flow.theme,
-        status: flow.status
+        theme: flow.theme
+        // status is intentionally omitted to preserve existing status
       };
       
       if (existingIndex >= 0) {

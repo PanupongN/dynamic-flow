@@ -14,6 +14,7 @@ export interface Flow {
   published_at?: Date;
   created_by?: string;
   version: number;
+  hasUnpublishedChanges?: boolean;
 }
 
 export interface FlowDraft {
@@ -68,7 +69,50 @@ export class FlowRepository {
     params.push(limit, (page - 1) * limit);
     
     const flows = await executeQuery(query, params);
-    return flows.map((flow) => this.transformFlowResponse(flow));
+    return flows.map((dbFlow) => {
+      // For getAll (dashboard), we want to show the actual flow status from the flows table
+      // but indicate if there are unpublished changes
+      let nodes, settings, theme;
+      let hasUnpublishedChanges = false;
+      
+      // Always prioritize published content for dashboard display
+      if (dbFlow.published_nodes) {
+        nodes = this.safeParseJson(dbFlow.published_nodes, []);
+        settings = this.safeParseJson(dbFlow.published_settings, {});
+        theme = this.safeParseJson(dbFlow.published_theme, {});
+        
+        // Check if there are draft changes that haven't been published
+        if (dbFlow.draft_nodes) {
+          hasUnpublishedChanges = true;
+        }
+      } else if (dbFlow.draft_nodes) {
+        // Fallback to draft content if no published content available
+        nodes = this.safeParseJson(dbFlow.draft_nodes, []);
+        settings = this.safeParseJson(dbFlow.draft_settings, {});
+        theme = this.safeParseJson(dbFlow.draft_theme, {});
+      } else {
+        // No content available
+        nodes = [];
+        settings = {};
+        theme = {};
+      }
+
+      return {
+        id: dbFlow.id,
+        title: dbFlow.title || '',
+        description: dbFlow.description || '',
+        nodes: nodes,
+        settings: settings,
+        theme: theme,
+        status: dbFlow.status || 'draft', // Use actual status from flows table
+        created_at: dbFlow.created_at || new Date(),
+        updated_at: dbFlow.updated_at || new Date(),
+        published_at: dbFlow.published_at || undefined,
+        created_by: dbFlow.created_by || undefined,
+        version: dbFlow.version || 1,
+        hasUnpublishedChanges: hasUnpublishedChanges
+      };
+    });
   }
 
   // Get flow by ID
@@ -84,7 +128,52 @@ export class FlowRepository {
     `;
     
     const flows = await executeQuery(query, [id]);
-    return flows.length > 0 ? this.transformFlowResponse(flows[0]) : null;
+    if (flows.length === 0) return null;
+    
+    const dbFlow = flows[0];
+    
+    // For getById, we want to show the actual flow status from the flows table
+    // but indicate if there are unpublished changes
+    let nodes, settings, theme;
+    let hasUnpublishedChanges = false;
+    
+    // Always prioritize published content for consistency
+    if (dbFlow.published_nodes) {
+      nodes = this.safeParseJson(dbFlow.published_nodes, []);
+      settings = this.safeParseJson(dbFlow.published_settings, {});
+      theme = this.safeParseJson(dbFlow.published_theme, {});
+      
+      // Check if there are draft changes that haven't been published
+      if (dbFlow.draft_nodes) {
+        hasUnpublishedChanges = true;
+      }
+    } else if (dbFlow.draft_nodes) {
+      // Fallback to draft content if no published content available
+      nodes = this.safeParseJson(dbFlow.draft_nodes, []);
+      settings = this.safeParseJson(dbFlow.draft_settings, {});
+      theme = this.safeParseJson(dbFlow.draft_theme, {});
+    } else {
+      // No content available
+      nodes = [];
+      settings = {};
+      theme = {};
+    }
+
+    return {
+      id: dbFlow.id,
+      title: dbFlow.title || '',
+      description: dbFlow.description || '',
+      nodes: nodes,
+      settings: settings,
+      theme: theme,
+      status: dbFlow.status || 'draft', // Use actual status from flows table
+      created_at: dbFlow.created_at || new Date(),
+      updated_at: dbFlow.updated_at || new Date(),
+      published_at: dbFlow.published_at || undefined,
+      created_by: dbFlow.created_by || undefined,
+      version: dbFlow.version || 1,
+      hasUnpublishedChanges: hasUnpublishedChanges
+    };
   }
 
   // Get draft version of flow by ID
@@ -136,6 +225,7 @@ export class FlowRepository {
   // Get published version of flow by ID
   async getPublishedById(id: string): Promise<Flow | null> {
     // Query directly from flow_published table to get the actual published content
+    // Order by published_at DESC to get the most recently published version
     const query = `
       SELECT f.*, 
              fp.nodes as published_nodes, fp.settings as published_settings, fp.theme as published_theme,
@@ -143,7 +233,7 @@ export class FlowRepository {
       FROM flows f
       INNER JOIN flow_published fp ON f.id = fp.flow_id
       WHERE f.id = $1
-      ORDER BY fp.version DESC
+      ORDER BY fp.published_at DESC
       LIMIT 1
     `;
     
@@ -239,56 +329,83 @@ export class FlowRepository {
     if (!existingFlow) return null;
 
     const now = new Date();
+
+    // For general updates, we only update metadata and draft content
+    // We don't change the status or interact with published table
     const updatedFlow: Flow = {
       ...existingFlow,
       ...updates,
+      // Don't change status on general updates - keep existing status
+      status: existingFlow.status,
       updated_at: now
     };
-
-    // If status changed to published, update published_at and version
-    if (updates.status === 'published' && existingFlow.status !== 'published') {
-      updatedFlow.published_at = now;
-      updatedFlow.version = existingFlow.version + 1;
-    }
 
     const queries = [
       {
         query: `
-          UPDATE flows 
-          SET title = $1, description = $2, status = $3, published_at = $4, version = $5, updated_at = $6
-          WHERE id = $7
+          UPDATE flows
+          SET title = $1, description = $2, updated_at = $3
+          WHERE id = $4
         `,
-        params: [updatedFlow.title, updatedFlow.description, updatedFlow.status, updatedFlow.published_at, updatedFlow.version, updatedFlow.updated_at, id]
+        params: [updatedFlow.title, updatedFlow.description, updatedFlow.updated_at, id]
       }
     ];
 
-    // Always update draft table to track changes (regardless of status)
-    // This allows us to track modifications even when status is 'published'
+    // Always update draft table to track changes
+    // This is the main purpose of the update method
     queries.push({
       query: `
         INSERT INTO flow_drafts (id, flow_id, nodes, settings, theme, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (flow_id) 
+        ON CONFLICT (flow_id)
         DO UPDATE SET nodes = $3, settings = $4, theme = $5, updated_at = $7
       `,
       params: [uuidv4(), id, JSON.stringify(updatedFlow.nodes), JSON.stringify(updatedFlow.settings), JSON.stringify(updatedFlow.theme), now, now]
     });
 
-    // If status is published, update or insert published version
-    if (updatedFlow.status === 'published') {
-      queries.push({
-        query: `
-          INSERT INTO flow_published (id, flow_id, nodes, settings, theme, version)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          ON CONFLICT (flow_id, version) 
-          DO UPDATE SET nodes = $3, settings = $4, theme = $5
-        `,
-        params: [uuidv4(), id, JSON.stringify(updatedFlow.nodes), JSON.stringify(updatedFlow.settings), JSON.stringify(updatedFlow.theme), updatedFlow.version]
-      });
-    }
-
     await executeTransaction(queries);
     return updatedFlow;
+  }
+
+  async publish(id: string, flowData: Partial<Flow>): Promise<Flow | null> {
+    const existingFlow = await this.getById(id);
+    if (!existingFlow) return null;
+
+    const now = new Date();
+    const newVersion = existingFlow.version + 1;
+
+    // Update main flows table with published status
+    const publishedFlow: Flow = {
+      ...existingFlow,
+      ...flowData,
+      status: 'published' as const,
+      published_at: now,
+      version: newVersion,
+      updated_at: now
+    };
+
+    const queries = [
+      {
+        query: `
+          UPDATE flows
+          SET title = $1, description = $2, status = $3, published_at = $4, version = $5, updated_at = $6
+          WHERE id = $7
+        `,
+        params: [publishedFlow.title, publishedFlow.description, publishedFlow.status, publishedFlow.published_at, publishedFlow.version, publishedFlow.updated_at, id]
+      },
+      {
+        query: `
+          INSERT INTO flow_published (id, flow_id, nodes, settings, theme, version, published_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (flow_id, version)
+          DO UPDATE SET nodes = $3, settings = $4, theme = $5, published_at = $7
+        `,
+        params: [uuidv4(), id, JSON.stringify(publishedFlow.nodes), JSON.stringify(publishedFlow.settings), JSON.stringify(publishedFlow.theme), publishedFlow.version, now]
+      }
+    ];
+
+    await executeTransaction(queries);
+    return publishedFlow;
   }
 
   // Delete flow
@@ -350,20 +467,26 @@ export class FlowRepository {
 
   // Transform database response to API format
   public transformFlowResponse(dbFlow: any): Flow {
-    // Determine which content to use based on flow status
+    // For dashboard display, we want to show the current published content
+    // but indicate if there are unpublished changes
     let nodes, settings, theme;
+    let hasUnpublishedChanges = false;
     
-    // Priority: draft content first (if available), then published content
-    if (dbFlow.draft_nodes) {
-      // Use draft content if available (regardless of status)
-      nodes = this.safeParseJson(dbFlow.draft_nodes, []);
-      settings = this.safeParseJson(dbFlow.draft_settings, {});
-      theme = this.safeParseJson(dbFlow.draft_theme, {});
-    } else if (dbFlow.published_nodes) {
-      // Fallback to published content if no draft available
+    // Always prioritize published content for dashboard display
+    if (dbFlow.published_nodes) {
       nodes = this.safeParseJson(dbFlow.published_nodes, []);
       settings = this.safeParseJson(dbFlow.published_settings, {});
       theme = this.safeParseJson(dbFlow.published_theme, {});
+      
+      // Check if there are draft changes that haven't been published
+      if (dbFlow.draft_nodes) {
+        hasUnpublishedChanges = true;
+      }
+    } else if (dbFlow.draft_nodes) {
+      // Fallback to draft content if no published content available
+      nodes = this.safeParseJson(dbFlow.draft_nodes, []);
+      settings = this.safeParseJson(dbFlow.draft_settings, {});
+      theme = this.safeParseJson(dbFlow.draft_theme, {});
     } else {
       // No content available
       nodes = [];
@@ -383,7 +506,9 @@ export class FlowRepository {
       updated_at: dbFlow.updated_at || new Date(),
       published_at: dbFlow.published_at || undefined,
       created_by: dbFlow.created_by || undefined,
-      version: dbFlow.version || 1
+      version: dbFlow.version || 1,
+      // Add metadata about unpublished changes
+      hasUnpublishedChanges: hasUnpublishedChanges
     };
   }
 }

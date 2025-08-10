@@ -400,9 +400,18 @@ router.post('/:id/publish', authenticateToken, async (req, res) => {
       });
     }
     
-    // Get current flow data and update status to published
-    // The repository will automatically handle saving to flow_published table
-    const updatedFlow = await flowRepository.update(id, { status: 'published' });
+    // Get current flow data and publish it
+    // Use the new publish method that handles published table separately
+    // Merge existing flow data with request body data for publishing
+    const publishData = {
+      ...existingFlow,
+      ...req.body,
+      nodes: req.body.nodes || existingFlow.nodes,
+      settings: req.body.settings || existingFlow.settings,
+      theme: req.body.theme || existingFlow.theme
+    };
+    
+    const updatedFlow = await flowRepository.publish(id, publishData);
     
     if (!updatedFlow) {
       return res.status(500).json({
@@ -421,6 +430,60 @@ router.post('/:id/publish', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to publish flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/flows/:id/fix-status - Fix flow status (for debugging, no auth required)
+router.post('/:id/fix-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!validateUuid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
+      });
+    }
+    
+    if (!status || !['draft', 'published', 'archived'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Must be draft, published, or archived'
+      });
+    }
+    
+    const existingFlow = await flowRepository.getById(id);
+    
+    if (!existingFlow) {
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
+    }
+    
+    // Update only the status field
+    const updatedFlow = await flowRepository.update(id, { status });
+    
+    if (!updatedFlow) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update flow status'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: transformFlowResponse(updatedFlow),
+      message: `Flow status updated to ${status} successfully`
+    });
+  } catch (error) {
+    console.error('Error updating flow status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update flow status',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

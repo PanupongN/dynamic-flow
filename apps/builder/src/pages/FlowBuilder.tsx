@@ -233,7 +233,7 @@ export function FlowBuilder() {
       // But save changes to draft table for tracking
       const updatedFlow = {
         ...currentFlow,
-        nodes: convertStepsToNodes(steps),
+        nodes: convertStepsToNodes(steps)
         // Don't change status - keep it as published if it was published
         // The backend will handle saving to draft table while maintaining published status
       };
@@ -262,32 +262,30 @@ export function FlowBuilder() {
     try {
       const { flowsApi } = await import('../services/api');
       
-      // First save current changes to draft, then publish
+      // Prepare flow data for publishing
       const cleanFlow = {
         title: currentFlow.title,
         description: currentFlow.description,
         nodes: convertStepsToNodes(steps),
         settings: currentFlow.settings,
         theme: currentFlow.theme,
-        status: 'draft' as const
+        status: 'published' as const // Set status to published directly with proper type
       };
       
-      // Save current changes as draft first
-      await flowsApi.update(flowId!, cleanFlow);
-      
-      // Then publish (this will save current content to published table)
-      const publishedFlow = await flowsApi.publish(flowId!);
+      // Publish the flow using the dedicated publish endpoint
+      // This will save to published table without creating draft entry
+      const updatedFlow = await flowsApi.publish(flowId!, cleanFlow);
       
       // Update current flow - convert API response to SharedFlow type
       const sharedFlow: SharedFlow = {
-        ...publishedFlow,
-        createdAt: new Date(publishedFlow.createdAt),
-        updatedAt: new Date(publishedFlow.updatedAt),
-        publishedAt: publishedFlow.publishedAt ? new Date(publishedFlow.publishedAt) : undefined,
+        ...updatedFlow,
+        createdAt: new Date(updatedFlow.createdAt),
+        updatedAt: new Date(updatedFlow.updatedAt),
+        publishedAt: updatedFlow.publishedAt ? new Date(updatedFlow.publishedAt) : undefined,
         theme: {
-          ...publishedFlow.theme,
+          ...updatedFlow.theme,
           typography: {
-            ...publishedFlow.theme.typography,
+            ...updatedFlow.theme.typography,
             fontSize: {
               small: '14px',
               medium: '16px',
@@ -299,8 +297,8 @@ export function FlowBuilder() {
       setCurrentFlow(sharedFlow);
       
       // Update steps state with the published flow nodes
-      if (publishedFlow.nodes && publishedFlow.nodes.length > 0) {
-        const convertedSteps = convertNodesToSteps(publishedFlow.nodes);
+      if (updatedFlow.nodes && updatedFlow.nodes.length > 0) {
+        const convertedSteps = convertNodesToSteps(updatedFlow.nodes);
         setSteps(convertedSteps as any);
       }
       

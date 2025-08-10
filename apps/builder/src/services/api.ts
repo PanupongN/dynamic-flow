@@ -221,9 +221,10 @@ class ApiClient {
     });
   }
 
-  async publishFlow(id: string): Promise<Flow> {
+  async publishFlow(id: string, flowData?: Partial<Flow>): Promise<Flow> {
     const response = await this.request<any>(`/flows/${id}/publish`, {
       method: 'POST',
+      body: flowData ? JSON.stringify(flowData) : undefined,
     });
     
     // Handle both old and new response formats
@@ -393,7 +394,7 @@ export const flowsApi = {
   create: (flow: Partial<Flow>) => apiClient.createFlow(flow),
   update: (id: string, flow: Partial<Flow>) => apiClient.updateFlow(id, flow),
   delete: (id: string) => apiClient.deleteFlow(id),
-  publish: (id: string) => apiClient.publishFlow(id),
+  publish: (id: string, flowData?: Partial<Flow>) => apiClient.publishFlow(id, flowData),
   unpublish: (id: string) => apiClient.unpublishFlow(id),
   duplicate: (id: string) => apiClient.duplicateFlow(id),
   getAnalytics: (id: string) => apiClient.getFlowAnalytics(id),
