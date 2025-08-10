@@ -8,8 +8,8 @@ import flowRoutes from './routes/flows.js';
 import responseRoutes from './routes/responses.js';
 import geolocationRoutes from './routes/geolocation.js';
 import authRoutes from './routes/auth.js';
-import { initializeStorage, getAnalytics } from './utils/storage.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { testConnection, healthCheck } from './config/database.js';
 import './config/firebaseAdmin.js'; // Initialize Firebase Admin
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,17 +25,37 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize storage
-await initializeStorage();
+// Test database connection on startup
+console.log('🔌 Testing Azure PostgreSQL connection...');
+testConnection().then(success => {
+  if (success) {
+    console.log('✅ Azure PostgreSQL connection successful');
+  } else {
+    console.error('❌ Azure PostgreSQL connection failed');
+    process.exit(1);
+  }
+});
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    storage: 'JSON file-based'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const dbHealth = await healthCheck();
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      storage: 'Azure PostgreSQL',
+      database: dbHealth
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      storage: 'Azure PostgreSQL',
+      error: error instanceof Error ? error.message : 'Database health check failed'
+    });
+  }
 });
 
 // Template list endpoints (fallback for external requests)
@@ -103,12 +123,23 @@ app.get('/api/analytics', async (req, res) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   try {
-    const analytics = await getAnalytics(); // Get global analytics (no flowId)
-    console.log('📊 Analytics data:', analytics);
-    res.json(analytics);
+    // Use analyticsRepository instead of storage.js
+    const { analyticsRepository } = await import('./repositories/analyticsRepository.js');
+    const summary = await analyticsRepository.getAnalyticsSummary();
+    
+    console.log('📊 Analytics summary:', summary);
+    res.json({
+      success: true,
+      data: summary,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Error fetching global analytics:', error);
-    res.status(500).json({ error: 'Failed to fetch global analytics' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch global analytics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -134,6 +165,6 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Dynamic Flow API server running on port ${PORT}`);
-  console.log(`📊 Storage: JSON file-based`);
+  console.log(`📊 Storage: Azure PostgreSQL`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });

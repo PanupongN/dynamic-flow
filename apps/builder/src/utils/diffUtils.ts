@@ -40,8 +40,6 @@ export interface Difference {
 export function compareFlowVersions(currentFlow: any, published: any): DiffResult {
   const differences: Difference[] = [];
 
-
-
   if (!published) {
     return {
       hasDifferences: true,
@@ -63,13 +61,34 @@ export function compareFlowVersions(currentFlow: any, published: any): DiffResul
     return String(value);
   };
 
-  // Title และ description อยู่ที่ root level ของ flow, ไม่ใช่ใน draft/published objects
-  // เราต้องเปรียบเทียบ current values (ที่ root) กับ published values (ที่ root เหมือนกัน)
-  // แต่เนื่องจาก API ส่ง currentFlow เป็น draft data มาแล้ว เราเลยต้องเปรียบเทียบกับ 
-  // metadata ของ published version ที่ควรจะเก็บไว้ที่ root level ของ published flow
+  // เปรียบเทียบ title และ description ระหว่าง draft และ published
+  const draftTitle = normalizeValue(currentFlow.title);
+  const publishedTitle = normalizeValue(published.title);
+  if (draftTitle !== publishedTitle) {
+    differences.push({
+      type: 'modified',
+      section: 'title',
+      path: 'title',
+      oldValue: publishedTitle,
+      newValue: draftTitle,
+      description: `เปลี่ยนชื่อจาก "${publishedTitle || 'ไม่มีชื่อ'}" เป็น "${draftTitle || 'ไม่มีชื่อ'}"`
+    });
+  }
 
-  // สำหรับ title และ description: เปรียบเทียบ draft content (nodes, settings, theme) เท่านั้น
-  // เพราะ title และ description ถูก update ที่ root level ตอน save แล้ว
+  const draftDesc = normalizeValue(currentFlow.description);
+  const publishedDesc = normalizeValue(published.description);
+  if (draftDesc !== publishedDesc && !(draftDesc === '' && publishedDesc === '')) {
+    differences.push({
+      type: 'modified',
+      section: 'description',
+      path: 'description',
+      oldValue: publishedDesc,
+      newValue: draftDesc,
+      description: `เปลี่ยนคำอธิบายจาก "${publishedDesc || 'ไม่มีคำอธิบาย'}" เป็น "${draftDesc || 'ไม่มีคำอธิบาย'}"`
+    });
+  }
+
+  // เปรียบเทียบ content (nodes, settings, theme) โดยตรง
   const draftContent = {
     nodes: currentFlow.nodes || [],
     settings: currentFlow.settings || {},
@@ -81,32 +100,6 @@ export function compareFlowVersions(currentFlow: any, published: any): DiffResul
     settings: published.settings || {},
     theme: published.theme || {}
   };
-
-  // สำหรับ title และ description ให้ compare กับ root level ของ published
-  // แต่ปัญหาคือ published ที่ส่งมาคือ published object ไม่ใช่ full flow
-  // เราจึงต้องใช้ versions.published จาก currentFlow แทน
-  const publishedFlow = currentFlow.versions?.published;
-  
-
-
-  // Compare title - เปรียบเทียบ current title กับ published title
-  if (publishedFlow) {
-    
-
-    // Compare description - เปรียบเทียบ current description กับ published description  
-    const draftDesc = normalizeValue(currentFlow.description);
-    const publishedDesc = normalizeValue(publishedFlow.description);
-    if (draftDesc !== publishedDesc && !(draftDesc === '' && publishedDesc === '')) {
-      differences.push({
-        type: 'modified',
-        section: 'description',
-        path: 'description',
-        oldValue: publishedDesc,
-        newValue: draftDesc,
-        description: `เปลี่ยนคำอธิบายจาก "${publishedDesc || 'ไม่มีคำอธิบาย'}" เป็น "${draftDesc || 'ไม่มีคำอธิบาย'}"`
-      });
-    }
-  }
 
   // Compare nodes/steps using content objects
   const draftNodes = draftContent.nodes || [];
@@ -457,15 +450,15 @@ export function compareFlowVersions(currentFlow: any, published: any): DiffResul
   // to make sure we didn't miss anything due to data structure issues
   if (differences.length === 0) {
     const isReallyEqual = deepEqual(draftContent, publishedContent) && 
-                         deepEqual(currentFlow.title, publishedFlow?.title) &&
-                         deepEqual(currentFlow.description, publishedFlow?.description);
+                         deepEqual(currentFlow.title, published.title) &&
+                         deepEqual(currentFlow.description, published.description);
     if (!isReallyEqual) {
       // There are differences but we couldn't detect them specifically
       console.warn('Deep comparison shows differences but specific comparison did not detect them', {
         draftContent,
         publishedContent,
         currentTitle: currentFlow.title,
-        publishedTitle: publishedFlow?.title
+        publishedTitle: published.title
       });
     }
   }

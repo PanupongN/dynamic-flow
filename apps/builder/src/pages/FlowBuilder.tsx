@@ -10,35 +10,11 @@ import { DraftStatusIndicator } from '../components/DraftStatusIndicator';
 import { createAdvancedTheme, type AdvancedThemeConfig } from '../themes/colorSystem';
 import { useFlowStore } from '../stores/flowStore';
 import { Play, Save, Settings, Eye, GitBranch } from 'lucide-react';
+import { Flow as SharedFlow } from '@dynamic-flow/types'; // Use Flow type from shared package
+import { flowsApi } from '../services/api';
 
-interface Step {
-  id: string;
-  title: string;
-  description?: string;
-  fields: Field[];
-  logic?: any[];
-  loop?: {
-    enabled: boolean;
-    sourceFieldId?: string; // Field ที่กำหนดจำนวน loop
-    minCount?: number;
-    maxCount?: number;
-    labelTemplate?: string; // เช่น "Guest {index}" หรือ "Item {index}"
-  };
-}
-
-interface Field {
-  id: string;
-  type: 'text_input' | 'email_input' | 'number_input' | 'phone_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
-  label: string;
-  required: boolean;
-  placeholder?: string;
-  options?: { id: string; label: string; value: string }[];
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-  };
-}
+// Use Step and Field types from shared package to avoid conflicts
+import { Step, Field } from '@dynamic-flow/types';
 
 export function FlowBuilder() {
   const { flowId } = useParams();
@@ -48,7 +24,7 @@ export function FlowBuilder() {
 
   const [activeTab, setActiveTab] = useState<'fields' | 'logic'>('fields');
   const [isSaving, setIsSaving] = useState(false);
-  const [steps, setSteps] = useState<Step[]>([]);
+  const [steps, setSteps] = useState<import('@dynamic-flow/types').Step[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [editingFlowName, setEditingFlowName] = useState(false);
   const [tempFlowName, setTempFlowName] = useState('');
@@ -62,8 +38,13 @@ export function FlowBuilder() {
     saveFlow
   } = useFlowStore();
 
+  const [publishedFlow, setPublishedFlow] = useState<SharedFlow | null>(null); // เพิ่ม state สำหรับ published flow
+  const [currentTheme, setCurrentTheme] = useState<string>('');
+  const [isLoadingLocal, setIsLoadingLocal] = useState(false);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
+
   // Convert flow nodes to steps
-  const convertNodesToSteps = (nodes: any[]): Step[] => {
+  const convertNodesToSteps = (nodes: any[]): import('@dynamic-flow/types').Step[] => {
     return nodes.map(node => ({
       id: node.id,
       title: node.data?.label || 'Untitled Step',
@@ -83,7 +64,7 @@ export function FlowBuilder() {
   };
 
   // Convert steps to flow nodes
-  const convertStepsToNodes = (steps: Step[]): any[] => {
+  const convertStepsToNodes = (steps: import('@dynamic-flow/types').Step[]): any[] => {
     return steps.map((step, index) => ({
       id: step.id,
       type: 'flow_step',
@@ -140,31 +121,105 @@ export function FlowBuilder() {
     const loadFlow = async () => {
       if (flowId) {
         try {
-          const { flowsApi } = await import('../services/api');
-          const flow = await flowsApi.getById(flowId);
+          setIsLoadingLocal(true);
+          setErrorLocal(null);
           
-          setCurrentFlow(flow);
+          // Load draft flow for editing
+          const flow = await flowsApi.getDraft(flowId);
+          // Convert API response to SharedFlow type
+          const sharedFlow: SharedFlow = {
+            ...flow,
+            createdAt: new Date(flow.createdAt),
+            updatedAt: new Date(flow.updatedAt),
+            publishedAt: flow.publishedAt ? new Date(flow.publishedAt) : undefined,
+            theme: {
+              ...flow.theme,
+              typography: {
+                ...flow.theme.typography,
+                fontSize: {
+                  small: '14px',
+                  medium: '16px',
+                  large: '18px'
+                }
+              }
+            }
+          };
+          setCurrentFlow(sharedFlow);
           
-          // Convert flow nodes to steps
-          const convertedSteps = convertNodesToSteps(flow.nodes || []);
-          setSteps(convertedSteps);
-          
-          // Select first step if available
-          if (convertedSteps.length > 0) {
-            setSelectedStepId(convertedSteps[0].id);
+          // Convert nodes to steps
+          if (flow.nodes && flow.nodes.length > 0) {
+            const convertedSteps = convertNodesToSteps(flow.nodes);
+            setSteps(convertedSteps as any);
           }
-        } catch (error) {
-          console.error('Failed to load flow:', error);
-          navigate('/');
+          
+          // Set theme
+          if (flow.theme?.id) {
+            setCurrentTheme(flow.theme.id);
+          }
+          
+          // Set advanced theme if available
+          if (flow.theme?.colors?.primary) {
+            // Create a simple theme config for now
+            const simpleTheme = createAdvancedTheme(
+              'custom',
+              'Custom Theme',
+              flow.theme.colors.primary,
+              flow.theme.colors.warning,
+              flow.theme.colors.error,
+              flow.theme.colors.success,
+              flow.theme.colors.success,
+              flow.theme.fontFamily || 'Inter'
+            );
+            setAdvancedTheme(simpleTheme);
+          }
+        } catch (err) {
+          console.error('Error loading flow:', err);
+          setErrorLocal(err instanceof Error ? err.message : 'Failed to load flow');
+        } finally {
+          setIsLoadingLocal(false);
         }
-      } else {
-        // Redirect to dashboard if no flowId provided
-        navigate('/');
       }
     };
 
     loadFlow();
-  }, [flowId, setCurrentFlow, navigate]);
+  }, [flowId]);
+
+  // Load published flow for comparison
+  useEffect(() => {
+    const loadPublishedFlow = async () => {
+      if (flowId && currentFlow) {
+        try {
+          // Load published flow for comparison
+          const published = await flowsApi.getPublished(flowId);
+          // Convert API response to SharedFlow type
+          const sharedPublishedFlow: SharedFlow = {
+            ...published,
+            createdAt: new Date(published.createdAt),
+            updatedAt: new Date(published.updatedAt),
+            publishedAt: published.publishedAt ? new Date(published.publishedAt) : undefined,
+            theme: {
+              ...published.theme,
+              typography: {
+                ...published.theme.typography,
+                fontSize: {
+                  small: '14px',
+                  medium: '16px',
+                  large: '18px'
+                }
+              }
+            }
+          };
+          setPublishedFlow(sharedPublishedFlow);
+        } catch (err) {
+          // If published version doesn't exist, set to null
+          console.log('No published version found for comparison');
+          setPublishedFlow(null);
+        }
+      }
+    };
+
+    loadPublishedFlow();
+  }, [flowId, currentFlow]);
 
   // Auto-save removed - users will manually save changes via "Save Draft" button
 
@@ -174,9 +229,13 @@ export function FlowBuilder() {
     setIsSaving(true);
     
     try {
+      // Keep the current status (published if it was published)
+      // But save changes to draft table for tracking
       const updatedFlow = {
         ...currentFlow,
-        nodes: convertStepsToNodes(steps)
+        nodes: convertStepsToNodes(steps),
+        // Don't change status - keep it as published if it was published
+        // The backend will handle saving to draft table while maintaining published status
       };
       
       await saveFlow(updatedFlow);
@@ -203,23 +262,75 @@ export function FlowBuilder() {
     try {
       const { flowsApi } = await import('../services/api');
       
-      // First save the current changes
+      // First save current changes to draft, then publish
       const cleanFlow = {
         title: currentFlow.title,
         description: currentFlow.description,
         nodes: convertStepsToNodes(steps),
         settings: currentFlow.settings,
         theme: currentFlow.theme,
-        status: currentFlow.status
+        status: 'draft' as const
       };
       
+      // Save current changes as draft first
       await flowsApi.update(flowId!, cleanFlow);
       
-      // Then publish
+      // Then publish (this will save current content to published table)
       const publishedFlow = await flowsApi.publish(flowId!);
       
-      // Update current flow
-      setCurrentFlow(publishedFlow);
+      // Update current flow - convert API response to SharedFlow type
+      const sharedFlow: SharedFlow = {
+        ...publishedFlow,
+        createdAt: new Date(publishedFlow.createdAt),
+        updatedAt: new Date(publishedFlow.updatedAt),
+        publishedAt: publishedFlow.publishedAt ? new Date(publishedFlow.publishedAt) : undefined,
+        theme: {
+          ...publishedFlow.theme,
+          typography: {
+            ...publishedFlow.theme.typography,
+            fontSize: {
+              small: '14px',
+              medium: '16px',
+              large: '18px'
+            }
+          }
+        }
+      };
+      setCurrentFlow(sharedFlow);
+      
+      // Update steps state with the published flow nodes
+      if (publishedFlow.nodes && publishedFlow.nodes.length > 0) {
+        const convertedSteps = convertNodesToSteps(publishedFlow.nodes);
+        setSteps(convertedSteps as any);
+      }
+      
+      // Reload published flow for comparison
+      if (flowId) {
+        try {
+          const published = await flowsApi.getPublished(flowId);
+          const sharedPublishedFlow: SharedFlow = {
+            ...published,
+            createdAt: new Date(published.createdAt),
+            updatedAt: new Date(published.updatedAt),
+            publishedAt: published.publishedAt ? new Date(published.publishedAt) : undefined,
+            theme: {
+              ...published.theme,
+              typography: {
+                ...published.theme.typography,
+                fontSize: {
+                  small: '14px',
+                  medium: '16px',
+                  large: '18px'
+                }
+              }
+            }
+          };
+          setPublishedFlow(sharedPublishedFlow);
+        } catch (err) {
+          console.log('No published version found for comparison');
+          setPublishedFlow(null);
+        }
+      }
       
       // Show success toast
       if (typeof window !== 'undefined' && (window as any).showToast) {
@@ -235,11 +346,11 @@ export function FlowBuilder() {
     }
   };
 
-  const handleStepsChange = (newSteps: Step[]) => {
+  const handleStepsChange = (newSteps: import('@dynamic-flow/types').Step[]) => {
     setSteps(newSteps);
   };
 
-  const handleStepChange = (updatedStep: Step) => {
+  const handleStepChange = (updatedStep: import('@dynamic-flow/types').Step) => {
     const newSteps = steps.map(step => 
       step.id === updatedStep.id ? updatedStep : step
     );
@@ -464,7 +575,7 @@ export function FlowBuilder() {
       </div>
 
       {/* Draft Status Indicator */}
-      <DraftStatusIndicator currentFlow={currentFlow} />
+      <DraftStatusIndicator currentFlow={currentFlow} publishedFlow={publishedFlow} />
 
       {/* Settings Panel */}
       {showSettings && (

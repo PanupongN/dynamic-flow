@@ -104,6 +104,16 @@ class ApiClient {
       }
 
       const data = await response.json();
+      
+      // Handle API response wrapper
+      if (data && typeof data === 'object' && 'success' in data) {
+        if (!data.success) {
+          throw new Error(data.error || 'API request failed');
+        }
+        // Return data field if it exists, otherwise return the whole response
+        return (data.data !== undefined ? data.data : data) as T;
+      }
+      
       return data;
     } catch (error) {
       console.error(`API request failed: ${endpoint}`, error);
@@ -126,33 +136,83 @@ class ApiClient {
     });
     
     const endpoint = `/flows${searchParams.toString() ? `?${searchParams}` : ''}`;
-    return this.request<{ flows: Flow[]; pagination: any }>(endpoint);
+    const response = await this.request<any>(endpoint);
+    
+    // Handle both old and new response formats
+    if (response.data && response.pagination) {
+      return {
+        flows: response.data,
+        pagination: response.pagination
+      };
+    } else if (Array.isArray(response)) {
+      // Fallback for direct array response
+      return {
+        flows: response,
+        pagination: { page: 1, limit: response.length, total: response.length }
+      };
+    } else {
+      // Fallback for other response formats
+      return {
+        flows: response.flows || response.data || [],
+        pagination: response.pagination || { page: 1, limit: 50, total: 0 }
+      };
+    }
   }
 
   async getFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}`);
+    const response = await this.request<any>(`/flows/${id}`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async getDraftFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}/draft`);
+    const response = await this.request<any>(`/flows/${id}/draft`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async getPublishedFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}/published`);
+    const response = await this.request<any>(`/flows/${id}/published`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async createFlow(flow: Partial<Flow>): Promise<Flow> {
-    return this.request<Flow>('/flows', {
+    const response = await this.request<any>('/flows', {
       method: 'POST',
       body: JSON.stringify(flow),
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async updateFlow(id: string, flow: Partial<Flow>): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}`, {
+    const response = await this.request<any>(`/flows/${id}`, {
       method: 'PUT',
       body: JSON.stringify(flow),
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async deleteFlow(id: string): Promise<void> {
@@ -162,25 +222,49 @@ class ApiClient {
   }
 
   async publishFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}/publish`, {
+    const response = await this.request<any>(`/flows/${id}/publish`, {
       method: 'POST',
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async unpublishFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}/unpublish`, {
+    const response = await this.request<any>(`/flows/${id}/unpublish`, {
       method: 'POST',
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async duplicateFlow(id: string): Promise<Flow> {
-    return this.request<Flow>(`/flows/${id}/duplicate`, {
+    const response = await this.request<any>(`/flows/${id}/duplicate`, {
       method: 'POST',
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async getFlowAnalytics(id: string): Promise<any> {
-    return this.request<any>(`/flows/${id}/analytics`);
+    const response = await this.request<any>(`/flows/${id}/analytics`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   // Response endpoints
@@ -199,18 +283,50 @@ class ApiClient {
     });
     
     const endpoint = `/responses${searchParams.toString() ? `?${searchParams}` : ''}`;
-    return this.request<{ responses: FormResponse[]; pagination: any }>(endpoint);
+    const response = await this.request<any>(endpoint);
+    
+    // Handle both old and new response formats
+    if (response.data && response.pagination) {
+      return {
+        responses: response.data,
+        pagination: response.pagination
+      };
+    } else if (Array.isArray(response)) {
+      // Fallback for direct array response
+      return {
+        responses: response,
+        pagination: { page: 1, limit: response.length, total: response.length }
+      };
+    } else {
+      // Fallback for other response formats
+      return {
+        responses: response.responses || response.data || [],
+        pagination: response.pagination || { page: 1, limit: 50, total: 0 }
+      };
+    }
   }
 
   async getResponse(id: string): Promise<FormResponse> {
-    return this.request<FormResponse>(`/responses/${id}`);
+    const response = await this.request<any>(`/responses/${id}`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   async submitResponse(response: FormResponse): Promise<{ id: string; message: string; submittedAt: string }> {
-    return this.request<{ id: string; message: string; submittedAt: string }>('/responses', {
+    const apiResponse = await this.request<any>('/responses', {
       method: 'POST',
       body: JSON.stringify(response),
     });
+    
+    // Handle both old and new response formats
+    if (apiResponse.data) {
+      return apiResponse.data;
+    }
+    return apiResponse;
   }
 
   async exportResponses(
@@ -231,19 +347,37 @@ class ApiClient {
   }
 
   async getResponseAnalytics(flowId: string): Promise<any> {
-    return this.request<any>(`/responses/flow/${flowId}/analytics`);
+    const response = await this.request<any>(`/responses/flow/${flowId}/analytics`);
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   // Global analytics
   async getGlobalAnalytics(): Promise<any> {
-    return this.request<any>('/analytics');
+    const response = await this.request<any>('/analytics');
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string; version: string }> {
-    return this.request<{ status: string; timestamp: string; version: string }>('/health', {
+    const response = await this.request<any>('/health', {
       method: 'GET',
     });
+    
+    // Handle both old and new response formats
+    if (response.data) {
+      return response.data;
+    }
+    return response;
   }
 }
 

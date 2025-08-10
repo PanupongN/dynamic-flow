@@ -4,10 +4,11 @@ import { compareFlowVersions, getDiffSummary, type DiffResult, type Difference }
 
 interface DraftStatusIndicatorProps {
   currentFlow: any;
+  publishedFlow?: any; // เพิ่ม publishedFlow prop
   isVisible?: boolean;
 }
 
-export function DraftStatusIndicator({ currentFlow, isVisible = true }: DraftStatusIndicatorProps) {
+export function DraftStatusIndicator({ currentFlow, publishedFlow, isVisible = true }: DraftStatusIndicatorProps) {
   const [showDetails, setShowDetails] = useState(false);
 
   if (!isVisible || !currentFlow) {
@@ -17,7 +18,7 @@ export function DraftStatusIndicator({ currentFlow, isVisible = true }: DraftSta
   // Compare draft vs published
   const diffResult: DiffResult = compareFlowVersions(
     currentFlow, // Current state (draft)
-    currentFlow.versions?.published || null // Published version
+    publishedFlow || null // Published version
   );
 
   if (!diffResult.hasDifferences) {
@@ -25,7 +26,7 @@ export function DraftStatusIndicator({ currentFlow, isVisible = true }: DraftSta
   }
 
   const summary = getDiffSummary(diffResult);
-  const isNewFlow = !currentFlow.versions?.published;
+  const isNewFlow = !publishedFlow; // ใช้ publishedFlow แทน currentFlow.versions?.published
 
   return (
     <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4">
@@ -105,10 +106,11 @@ export function DraftStatusIndicator({ currentFlow, isVisible = true }: DraftSta
 
 interface DraftStatusBadgeProps {
   currentFlow: any;
+  publishedFlow?: any; // เพิ่ม publishedFlow prop
   size?: 'small' | 'medium';
 }
 
-export function DraftStatusBadge({ currentFlow, size = 'medium' }: DraftStatusBadgeProps) {
+export function DraftStatusBadge({ currentFlow, publishedFlow, size = 'medium' }: DraftStatusBadgeProps) {
   if (!currentFlow) return null;
 
   // Check if this is Dashboard data (no versions) vs Builder data (has versions)
@@ -135,12 +137,12 @@ export function DraftStatusBadge({ currentFlow, size = 'medium' }: DraftStatusBa
   // Builder flow data - use full diff comparison
   const diffResult = compareFlowVersions(
     currentFlow,
-    currentFlow.versions?.published || null
+    publishedFlow || null // ใช้ publishedFlow แทน currentFlow.versions?.published
   );
 
   if (!diffResult.hasDifferences) return null;
 
-  const isNewFlow = !currentFlow.versions?.published;
+  const isNewFlow = !publishedFlow; // ใช้ publishedFlow แทน currentFlow.versions?.published
 
   return (
     <div className={`inline-flex items-center ${
@@ -154,10 +156,11 @@ export function DraftStatusBadge({ currentFlow, size = 'medium' }: DraftStatusBa
 
 interface DraftDetailButtonProps {
   flowId: string;
+  publishedFlow?: any; // เพิ่ม publishedFlow prop
   size?: 'small' | 'medium';
 }
 
-export function DraftDetailButton({ flowId, size = 'medium' }: DraftDetailButtonProps) {
+export function DraftDetailButton({ flowId, publishedFlow, size = 'medium' }: DraftDetailButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
@@ -176,7 +179,7 @@ export function DraftDetailButton({ flowId, size = 'medium' }: DraftDetailButton
       
       const result = compareFlowVersions(
         detailedFlow,
-        (detailedFlow as any).versions?.published || null
+        publishedFlow || null // ใช้ publishedFlow แทน (detailedFlow as any).versions?.published
       );
       
       setDiffResult(result);

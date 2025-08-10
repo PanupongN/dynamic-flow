@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@dynamic-flow/types": ["./packages/types/src"],
+      "@dynamic-flow/ui": ["./packages/ui/src"]
+    }
+  },
+  "include": ["packages/*/src"],
+  "references": [
+    { "path": "./apps/api" },
+    { "path": "./apps/builder" },
+    { "path": "./apps/form" },
+    { "path": "./packages/types" },
+    { "path": "./packages/ui" }
+  ]
+}

@@ -17,7 +17,9 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@dynamic-flow/types": ["../../packages/types/src"],
+      "@dynamic-flow/ui": ["../../packages/ui/src"]
     }
   },
   "include": ["src"],

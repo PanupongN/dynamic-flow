@@ -69,11 +69,30 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
 
   const watchedValues = watch();
 
-  // Process flow nodes into form steps
+    // Process flow nodes into form steps
   useEffect(() => {
-    if (!flow.nodes || flow.nodes.length === 0) return;
+    console.log('🔍 FormRenderer Debug:');
+    console.log('  - Flow:', flow);
+    console.log('  - Flow nodes:', flow.nodes);
+    console.log('  - Flow nodes length:', flow.nodes?.length || 0);
+    
+    if (!flow.nodes || flow.nodes.length === 0) {
+      console.log('  - No nodes available, returning early');
+      return;
+    }
+
+    // Log each node type
+    flow.nodes.forEach((node, index) => {
+      console.log(`  - Node ${index}:`, {
+        id: node.id,
+        type: node.type,
+        label: node.data?.label
+      });
+    });
 
     const flowStepNodes = flow.nodes.filter(node => node.type === 'flow_step');
+    console.log('  - Flow step nodes:', flowStepNodes);
+    console.log('  - Flow step nodes length:', flowStepNodes.length);
     
     let dynamicSteps: FormStep[] = [];
     
@@ -99,6 +118,9 @@ export function FormRenderer({ flow, isPreview = false, onSubmit }: FormRenderer
         });
       }
     });
+    
+    console.log('  - Dynamic steps:', dynamicSteps);
+    console.log('  - Dynamic steps length:', dynamicSteps.length);
     
     // Apply step visibility logic
     const updatedSteps = dynamicSteps.map((step, index) => {

@@ -53,6 +53,36 @@ export interface ChoiceOption {
   value: string;
 }
 
+// Step and Field types for Flow Builder
+export interface Step {
+  id: string;
+  title: string;
+  description?: string;
+  fields: Field[];
+  logic?: any[];
+  loop?: {
+    enabled: boolean;
+    sourceFieldId?: string;
+    minCount?: number;
+    maxCount?: number;
+    labelTemplate?: string;
+  };
+}
+
+export interface Field {
+  id: string;
+  type: 'text_input' | 'email_input' | 'number_input' | 'phone_input' | 'single_choice' | 'multiple_choice' | 'date_picker' | 'file_upload' | 'textarea';
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: ChoiceOption[];
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+  };
+}
+
 // Flow Definition
 export interface Flow {
   id: string;

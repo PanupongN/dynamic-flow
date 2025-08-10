@@ -1,16 +1,54 @@
 import express from 'express';
 import { auth } from '../config/firebaseAdmin.js';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Type guard to ensure user exists after authentication
+const ensureUser = (req: any): { uid: string; email?: string; displayName?: string; photoURL?: string } => {
+  if (!req.user) {
+    throw new Error('User not found in request');
+  }
+  return req.user;
+};
+
+// Type assertion for authenticated requests
+const assertAuthenticated = (req: any) => req as any;
+
+// Helper function to get user from authenticated request
+const getUserFromRequest = (req: any) => {
+  const authenticatedReq = assertAuthenticated(req);
+  return ensureUser(authenticatedReq);
+};
+
+// Type assertion for Express Request with user property
+interface AuthenticatedRequest extends Request {
+  user: {
+    uid: string;
+    email?: string;
+    displayName?: string;
+    photoURL?: string;
+  };
+}
+
+// Type assertion for Express Request with user property
+type AuthenticatedRequestHandler = (
+  req: AuthenticatedRequest,
+  res: Response
+) => void | Promise<void>;
+
+// Helper function to cast request to authenticated request
+const castToAuthenticated = (req: Request): AuthenticatedRequest => {
+  return req as AuthenticatedRequest;
+};
 
 /**
  * GET /api/auth/me
  * Get current user information
  */
-router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res) => {
+router.get('/me', authenticateToken, async (req: Request, res) => {
   try {
-    const { uid } = req.user;
+    const { uid } = getUserFromRequest(castToAuthenticated(req));
     
     // Get user record from Firebase Auth
     const userRecord = await auth.getUser(uid);
@@ -79,9 +117,9 @@ router.post('/verify', async (req, res) => {
  * POST /api/auth/refresh
  * Refresh user session (optional - Firebase handles this automatically)
  */
-router.post('/refresh', authenticateToken, async (req: AuthenticatedRequest, res) => {
+router.post('/refresh', authenticateToken, async (req: Request, res) => {
   try {
-    const { uid } = req.user;
+    const { uid } = getUserFromRequest(castToAuthenticated(req));
     
     // Get fresh user data
     const userRecord = await auth.getUser(uid);
@@ -109,11 +147,11 @@ router.post('/refresh', authenticateToken, async (req: AuthenticatedRequest, res
  * DELETE /api/auth/logout
  * Logout user (client-side should clear the token)
  */
-router.delete('/logout', authenticateToken, async (req: AuthenticatedRequest, res) => {
+router.delete('/logout', authenticateToken, async (req: Request, res) => {
   try {
     // Note: Firebase doesn't support server-side logout
     // This endpoint is for logging purposes
-    const { uid } = req.user;
+    const { uid } = getUserFromRequest(castToAuthenticated(req));
     
     console.log(`User ${uid} logged out`);
     
@@ -135,13 +173,14 @@ router.delete('/logout', authenticateToken, async (req: AuthenticatedRequest, re
  * Check authentication status
  */
 router.get('/status', authenticateToken, (req: AuthenticatedRequest, res) => {
+  const user = getUserFromRequest(req);
   res.json({
     success: true,
     authenticated: true,
     user: {
-      uid: req.user.uid,
-      email: req.user.email,
-      displayName: req.user.displayName
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName
     }
   });
 });

@@ -1,7 +1,8 @@
 import express from 'express';
 import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 import Joi from 'joi';
-import { flowsStorage, updateAnalytics, getAnalytics } from '../utils/storage.js';
+import { flowRepository } from '../repositories/flowRepository.js';
+import { analyticsRepository } from '../repositories/analyticsRepository.js';
 import { authenticateToken, optionalAuth, AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,26 +11,21 @@ const router = express.Router();
 const transformFlowResponse = (flow: any) => {
   if (!flow) return null;
   
-  return flow.draft ? {
-    // New structure: merge draft content with metadata from root level
+  // The flow object from repository already has the correct nodes, settings, theme
+  // because it was processed by repository's transformFlowResponse
+  return {
     id: flow.id,
     title: flow.title,
     description: flow.description,
     status: flow.status,
-    createdAt: flow.createdAt,
-    updatedAt: flow.updatedAt,
-    publishedAt: flow.publishedAt,
-    nodes: flow.draft.nodes || [],
-    settings: flow.draft.settings || {},
-    theme: flow.draft.theme || {},
-    // Include version info for debugging
-    versions: {
-      draft: flow.draft,
-      published: flow.published
-    }
-  } : {
-    // Old structure: return as-is
-    ...flow
+    createdAt: flow.created_at,
+    updatedAt: flow.updated_at,
+    publishedAt: flow.published_at,
+    nodes: flow.nodes || [],
+    settings: flow.settings || {},
+    theme: flow.theme || {},
+    createdBy: flow.created_by,
+    version: flow.version
   };
 };
 
@@ -76,164 +72,137 @@ router.get('/', async (req, res) => {
   try {
     const { status, search, limit = 50, page = 1 } = req.query;
     
-    let flows = await flowsStorage.read();
+    const flows = await flowRepository.getAll(
+      status as string,
+      search as string,
+      parseInt(limit as string),
+      parseInt(page as string)
+    );
     
-    // Ensure flows have required fields (for backward compatibility)
-    flows = flows.map((flow: any) => ({
-      ...flow,
-      title: flow.title || 'Untitled Flow',
-      description: flow.description || '',
-      // Keep draft/published structure intact
-    }));
-    
-    // Filter by status
-    if (status) {
-      flows = flows.filter((flow: any) => flow.status === status);
-    }
-    
-    // Search by title or description
-    if (search) {
-      const searchTerm = search.toString().toLowerCase();
-      flows = flows.filter((flow: any) => 
-        (flow.title || '').toLowerCase().includes(searchTerm) ||
-        (flow.description || '').toLowerCase().includes(searchTerm)
-      );
-    }
-    
-    // Pagination
-    const startIndex = (Number(page) - 1) * Number(limit);
-    const endIndex = startIndex + Number(limit);
-    const paginatedFlows = flows.slice(startIndex, endIndex);
+    // Transform to API response format
+    const transformedFlows = flows.map(transformFlowResponse);
     
     res.json({
-      flows: paginatedFlows,
+      success: true,
+      data: transformedFlows,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: flows.length,
-        pages: Math.ceil(flows.length / Number(limit))
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        total: flows.length
       }
     });
   } catch (error) {
     console.error('Error fetching flows:', error);
-    res.status(500).json({ error: 'Failed to fetch flows' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch flows',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// GET /api/flows/:id - Get specific flow (returns draft for editing)
+// GET /api/flows/:id - Get flow by ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Validate UUID format
     if (!validateUuid(id)) {
-      return res.status(400).json({ 
-        error: 'Invalid flow ID format',
-        details: ['Flow ID must be a valid UUID']
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
       });
     }
     
-    const flow = await flowsStorage.findById(id) as any;
+    const flow = await flowRepository.getById(id);
     
     if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
     }
     
-    // Track view for analytics
-    if (flow.draft?.settings?.collectAnalytics || flow.settings?.collectAnalytics) {
-      await updateAnalytics(id, 'view');
-    }
-    
-    // Handle both old and new flow structures for backward compatibility
-    const responseFlow = transformFlowResponse(flow);
-    
-    res.json(responseFlow);
+    res.json({
+      success: true,
+      data: flow // flow object from repository already has correct format
+    });
   } catch (error) {
     console.error('Error fetching flow:', error);
-    res.status(500).json({ error: 'Failed to fetch flow' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// GET /api/flows/:id/draft - Get draft version
+// GET /api/flows/:id/draft - Get draft version of flow
 router.get('/:id/draft', async (req, res) => {
   try {
     const { id } = req.params;
     
     if (!validateUuid(id)) {
-      return res.status(400).json({ 
-        error: 'Invalid flow ID format',
-        details: ['Flow ID must be a valid UUID']
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
       });
     }
     
-    const flow = await flowsStorage.findById(id) as any;
+    const flow = await flowRepository.getDraftById(id);
     
     if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'Flow draft not found'
+      });
     }
     
-    // Return draft version with metadata
-    const draftFlow = {
-      id: flow.id,
-      title: flow.title,
-      description: flow.description,
-      status: flow.status,
-      createdAt: flow.createdAt,
-      updatedAt: flow.updatedAt,
-      publishedAt: flow.publishedAt,
-      version: 'draft',
-      ...(flow.draft || {})
-    };
-    
-    res.json(draftFlow);
+    res.json({
+      success: true,
+      data: flow // flow object from repository already has correct format
+    });
   } catch (error) {
-    console.error('Error fetching draft flow:', error);
-    res.status(500).json({ error: 'Failed to fetch draft flow' });
+    console.error('Error fetching flow draft:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch flow draft',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// GET /api/flows/:id/published - Get published version (for public access)
+// GET /api/flows/:id/published - Get published version of flow
 router.get('/:id/published', async (req, res) => {
   try {
     const { id } = req.params;
     
     if (!validateUuid(id)) {
-      return res.status(400).json({ 
-        error: 'Invalid flow ID format',
-        details: ['Flow ID must be a valid UUID']
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
       });
     }
     
-    const flow = await flowsStorage.findById(id) as any;
+    const flow = await flowRepository.getPublishedById(id);
     
     if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'Flow published version not found'
+      });
     }
     
-    if (flow.status !== 'published' || !flow.published) {
-      return res.status(404).json({ error: 'Flow is not published' });
-    }
-    
-    // Update analytics for public view
-    if (flow.published?.settings?.collectAnalytics) {
-      await updateAnalytics(id, 'view');
-    }
-    
-    // Return published version
-    const publishedFlow = {
-      id: flow.id,
-      title: flow.title,
-      description: flow.description,
-      status: flow.status,
-      publishedAt: flow.publishedAt,
-      version: 'published',
-      ...flow.published
-    };
-    
-    res.json(publishedFlow);
+    res.json({
+      success: true,
+      data: flow // flow object from repository already has correct format
+    });
   } catch (error) {
-    console.error('Error fetching published flow:', error);
-    res.status(500).json({ error: 'Failed to fetch published flow' });
+    console.error('Error fetching flow published version:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch flow published version',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -243,43 +212,47 @@ router.post('/', authenticateToken, async (req, res) => {
     const { error, value } = createFlowSchema.validate(req.body);
     
     if (error) {
-      console.error('Validation error:', error.details);
-      return res.status(400).json({ 
+      return res.status(400).json({
+        success: false,
         error: 'Validation error',
         details: error.details.map(d => d.message)
       });
     }
     
-    // Remove any id, createdAt, updatedAt, publishedAt from the payload
-    const { id, createdAt, updatedAt, publishedAt, ...cleanValue } = value;
-    
-    const flowId = uuidv4();
-    const timestamp = new Date().toISOString();
-    
-    // Extract metadata and content
-    const { status, title, description, ...content } = cleanValue;
-    
-    const flow = {
-      id: flowId,
-      title: title || 'Untitled Flow',
-      description: description,
-      status: status || 'draft',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      publishedAt: status === 'published' ? timestamp : null,
-      createdBy: (req as AuthenticatedRequest).user.uid,
-      updatedBy: (req as AuthenticatedRequest).user.uid,
-      // Store draft content (current working version)
-      draft: content,
-      // Store published content (only when published)
-      published: status === 'published' ? content : null
+    const flowData = {
+      ...value,
+      created_by: req.user?.uid || 'anonymous'
     };
     
-    const savedFlow = await flowsStorage.create(flow);
-    res.status(201).json(savedFlow);
+    const flow = await flowRepository.create(flowData);
+    
+    // Record analytics event if enabled
+    if (flowData.settings?.collectAnalytics !== false) {
+      try {
+        await analyticsRepository.recordEvent({
+          flow_id: flow.id,
+          event_type: 'view',
+          user_id: req.user?.uid,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent')
+        });
+      } catch (analyticsError) {
+        console.warn('Failed to record analytics event:', analyticsError);
+      }
+    }
+    
+    res.status(201).json({
+      success: true,
+      data: transformFlowResponse(flow),
+      message: 'Flow created successfully'
+    });
   } catch (error) {
     console.error('Error creating flow:', error);
-    res.status(500).json({ error: 'Failed to create flow' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -288,75 +261,61 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Validate UUID format
     if (!validateUuid(id)) {
-      return res.status(400).json({ 
-        error: 'Invalid flow ID format',
-        details: ['Flow ID must be a valid UUID']
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
       });
     }
     
     const { error, value } = updateFlowSchema.validate(req.body);
     
     if (error) {
-      console.error('Validation error:', error.details);
-      return res.status(400).json({ 
+      return res.status(400).json({
+        success: false,
         error: 'Validation error',
         details: error.details.map(d => d.message)
       });
     }
     
-    const existingFlow = await flowsStorage.findById(id);
+    const existingFlow = await flowRepository.getById(id);
+    
     if (!existingFlow) {
-      return res.status(404).json({ error: 'Flow not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
     }
     
-    // Remove system fields that shouldn't be updated directly
-    const { id: payloadId, createdAt, ...updateData } = value;
+    // Check if user has permission to edit this flow
+    if (existingFlow.created_by && existingFlow.created_by !== req.user?.uid) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to edit this flow'
+      });
+    }
     
-    const timestamp = new Date().toISOString();
-    const { status, title, description, ...content } = updateData;
+    const updatedFlow = await flowRepository.update(id, value);
     
-    // Handle both old and new flow structures
-    const existingFlowData = existingFlow as any;
+    if (!updatedFlow) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update flow'
+      });
+    }
     
-    // If it's an old flow structure (no draft/published), migrate it
-    const currentDraft = existingFlowData.draft || {
-      nodes: existingFlowData.nodes || [],
-      settings: existingFlowData.settings || {},
-      theme: existingFlowData.theme || {}
-    };
-    
-    // Prepare data for storage
-    const updatePayload = {
-      id: existingFlowData.id,
-      title: title !== undefined ? title : existingFlowData.title,
-      description: description !== undefined ? description : existingFlowData.description,
-      status: status || existingFlowData.status || 'draft',
-      createdAt: existingFlowData.createdAt,
-      updatedAt: timestamp,
-      updatedBy: (req as AuthenticatedRequest).user.uid,
-      publishedAt: existingFlowData.publishedAt || null,
-      
-      // Always update draft content (without title/description)
-      draft: { ...currentDraft, ...content },
-      
-      // Only update published content if status changes to published
-      published: status === 'published' && existingFlowData.status !== 'published'
-        ? { ...currentDraft, ...content }
-        : existingFlowData.published || null
-    };
-    
-    // Always update draft content when saving
-    const updatedFlow = await flowsStorage.update(id, updatePayload);
-    
-    // Transform response to match GET endpoint format (for consistency)
-    const responseFlow = transformFlowResponse(updatedFlow);
-    
-    res.json(responseFlow);
+    res.json({
+      success: true,
+      data: transformFlowResponse(updatedFlow),
+      message: 'Flow updated successfully'
+    });
   } catch (error) {
     console.error('Error updating flow:', error);
-    res.status(500).json({ error: 'Failed to update flow' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -365,123 +324,158 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Validate UUID format
     if (!validateUuid(id)) {
-      return res.status(400).json({ 
-        error: 'Invalid flow ID format',
-        details: ['Flow ID must be a valid UUID']
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
       });
     }
     
-    const deleted = await flowsStorage.delete(id);
+    const existingFlow = await flowRepository.getById(id);
     
-    if (!deleted) {
-      return res.status(404).json({ error: 'Flow not found' });
+    if (!existingFlow) {
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
     }
     
-    res.status(204).send();
+    // Check if user has permission to delete this flow
+    if (existingFlow.created_by && existingFlow.created_by !== req.user?.uid) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to delete this flow'
+      });
+    }
+    
+    const deleted = await flowRepository.delete(id);
+    
+    if (!deleted) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete flow'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Flow deleted successfully'
+    });
   } catch (error) {
     console.error('Error deleting flow:', error);
-    res.status(500).json({ error: 'Failed to delete flow' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// POST /api/flows/:id/publish - Publish flow (copy draft to published)
+// POST /api/flows/:id/publish - Publish flow
 router.post('/:id/publish', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const flow = await flowsStorage.findById(id);
     
-    if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
+    if (!validateUuid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
+      });
     }
     
-    const timestamp = new Date().toISOString();
+    const existingFlow = await flowRepository.getById(id);
     
-    const updatedFlow = await flowsStorage.update(id, {
-      ...(flow as any),
-      status: 'published',
-      publishedAt: timestamp,
-      updatedAt: timestamp,
-      // Copy current draft to published version
-      published: (flow as any).draft
+    if (!existingFlow) {
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
+    }
+    
+    // Check if user has permission to publish this flow
+    if (existingFlow.created_by && existingFlow.created_by !== req.user?.uid) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to publish this flow'
+      });
+    }
+    
+    // Get current flow data and update status to published
+    // The repository will automatically handle saving to flow_published table
+    const updatedFlow = await flowRepository.update(id, { status: 'published' });
+    
+    if (!updatedFlow) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to publish flow'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: transformFlowResponse(updatedFlow),
+      message: 'Flow published successfully'
     });
-    
-    // Transform response to match GET endpoint format (for consistency)
-    const responseFlow = transformFlowResponse(updatedFlow);
-    
-    res.json(responseFlow);
   } catch (error) {
     console.error('Error publishing flow:', error);
-    res.status(500).json({ error: 'Failed to publish flow' });
-  }
-});
-
-// POST /api/flows/:id/unpublish - Unpublish flow
-router.post('/:id/unpublish', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const flow = await flowsStorage.findById(id);
-    
-    if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
-    }
-    
-    const updatedFlow = await flowsStorage.update(id, {
-      status: 'draft',
-      updatedAt: new Date().toISOString()
+    res.status(500).json({
+      success: false,
+      error: 'Failed to publish flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
-    
-    res.json(updatedFlow);
-  } catch (error) {
-    console.error('Error unpublishing flow:', error);
-    res.status(500).json({ error: 'Failed to unpublish flow' });
   }
 });
 
-// GET /api/flows/:id/analytics - Get flow analytics
-router.get('/:id/analytics', async (req, res) => {
+// POST /api/flows/:id/archive - Archive flow
+router.post('/:id/archive', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const flow = await flowsStorage.findById(id);
     
-    if (!flow) {
-      return res.status(404).json({ error: 'Flow not found' });
+    if (!validateUuid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid flow ID format'
+      });
     }
     
-    const analytics = await getAnalytics(id);
-    res.json(analytics);
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
-  }
-});
-
-// POST /api/flows/:id/duplicate - Duplicate flow
-router.post('/:id/duplicate', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const originalFlow = await flowsStorage.findById(id);
+    const existingFlow = await flowRepository.getById(id);
     
-    if (!originalFlow) {
-      return res.status(404).json({ error: 'Flow not found' });
+    if (!existingFlow) {
+      return res.status(404).json({
+        success: false,
+        error: 'Flow not found'
+      });
     }
     
-    const duplicatedFlow = {
-      ...(originalFlow as any),
-      id: uuidv4(),
-      title: `${(originalFlow as any).title} (Copy)`,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      publishedAt: null
-    };
+    // Check if user has permission to archive this flow
+    if (existingFlow.created_by && existingFlow.created_by !== req.user?.uid) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to archive this flow'
+      });
+    }
     
-    const savedFlow = await flowsStorage.create(duplicatedFlow);
-    res.status(201).json(savedFlow);
+    const updatedFlow = await flowRepository.update(id, { status: 'archived' });
+    
+    if (!updatedFlow) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to archive flow'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: transformFlowResponse(updatedFlow),
+      message: 'Flow archived successfully'
+    });
   } catch (error) {
-    console.error('Error duplicating flow:', error);
-    res.status(500).json({ error: 'Failed to duplicate flow' });
+    console.error('Error archiving flow:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to archive flow',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

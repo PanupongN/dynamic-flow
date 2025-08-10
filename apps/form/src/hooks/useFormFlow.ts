@@ -32,7 +32,7 @@ export const useFormFlow = (flowId: string | undefined, loadType: FlowLoadType):
         ? await flowsApi.getDraft(flowId)
         : await flowsApi.getPublished(flowId);
       
-      setFlow(flowData);
+      setFlow(flowData.data);  // ส่ง flowData.data แทน flowData ทั้งหมด
     } catch (err) {
       console.error(`Error loading ${loadType} flow:`, err);
       
