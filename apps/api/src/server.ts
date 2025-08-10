@@ -7,8 +7,10 @@ import { dirname, join } from 'path';
 import flowRoutes from './routes/flows.js';
 import responseRoutes from './routes/responses.js';
 import geolocationRoutes from './routes/geolocation.js';
+import authRoutes from './routes/auth.js';
 import { initializeStorage, getAnalytics } from './utils/storage.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import './config/firebaseAdmin.js'; // Initialize Firebase Admin
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -97,8 +99,8 @@ app.get('/api/analytics', async (req, res) => {
   
   // Set CORS headers explicitly
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   try {
     const analytics = await getAnalytics(); // Get global analytics (no flowId)
@@ -110,7 +112,16 @@ app.get('/api/analytics', async (req, res) => {
   }
 });
 
+// Handle OPTIONS for analytics CORS preflight
+app.options('/api/analytics', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(200).send();
+});
+
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/flows', flowRoutes);
 app.use('/api/responses', responseRoutes);
 app.use('/api/geo', geolocationRoutes);

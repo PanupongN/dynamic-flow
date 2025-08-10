@@ -2,6 +2,7 @@ import express from 'express';
 import { v4 as uuidv4, validate as validateUuid } from 'uuid';
 import Joi from 'joi';
 import { flowsStorage, updateAnalytics, getAnalytics } from '../utils/storage.js';
+import { authenticateToken, optionalAuth, AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -237,7 +238,7 @@ router.get('/:id/published', async (req, res) => {
 });
 
 // POST /api/flows - Create new flow
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { error, value } = createFlowSchema.validate(req.body);
     
@@ -266,6 +267,8 @@ router.post('/', async (req, res) => {
       createdAt: timestamp,
       updatedAt: timestamp,
       publishedAt: status === 'published' ? timestamp : null,
+      createdBy: (req as AuthenticatedRequest).user.uid,
+      updatedBy: (req as AuthenticatedRequest).user.uid,
       // Store draft content (current working version)
       draft: content,
       // Store published content (only when published)
@@ -281,7 +284,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/flows/:id - Update flow
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -332,6 +335,7 @@ router.put('/:id', async (req, res) => {
       status: status || existingFlowData.status || 'draft',
       createdAt: existingFlowData.createdAt,
       updatedAt: timestamp,
+      updatedBy: (req as AuthenticatedRequest).user.uid,
       publishedAt: existingFlowData.publishedAt || null,
       
       // Always update draft content (without title/description)
@@ -357,7 +361,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/flows/:id - Delete flow
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -383,7 +387,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/flows/:id/publish - Publish flow (copy draft to published)
-router.post('/:id/publish', async (req, res) => {
+router.post('/:id/publish', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const flow = await flowsStorage.findById(id);
@@ -414,7 +418,7 @@ router.post('/:id/publish', async (req, res) => {
 });
 
 // POST /api/flows/:id/unpublish - Unpublish flow
-router.post('/:id/unpublish', async (req, res) => {
+router.post('/:id/unpublish', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const flow = await flowsStorage.findById(id);
@@ -454,7 +458,7 @@ router.get('/:id/analytics', async (req, res) => {
 });
 
 // POST /api/flows/:id/duplicate - Duplicate flow
-router.post('/:id/duplicate', async (req, res) => {
+router.post('/:id/duplicate', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const originalFlow = await flowsStorage.findById(id);

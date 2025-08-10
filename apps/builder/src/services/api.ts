@@ -54,15 +54,37 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    // Try to get Firebase auth token if available
+    try {
+      const { auth } = await import('../config/firebaseConfig');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.warn('Could not get auth token:', error);
+    }
+
+    return headers;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    const authHeaders = await this.getAuthHeaders();
+    
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        ...authHeaders,
         ...options.headers,
       },
       ...options,
